@@ -1,2 +1,2 @@
 # DL32_mpy
-MicroPython port of the ESP32 Smart Door Lock
+MicroPython release of the ESP32powered Wifi & RFID Smart Door Lock
