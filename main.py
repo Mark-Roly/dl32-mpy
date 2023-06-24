@@ -8,12 +8,13 @@ from microdot_asyncio import Microdot, send_file
 from umqtt.simple import MQTTClient
 from wiegand import Wiegand
 from machine import SDCard
+import machine
 import time
 import uasyncio
 import os
 gc.collect()
 
-_VERSION = const("20230623")
+_VERSION = const("20230624")
 
 year, month, day, hour, mins, secs, weekday, yearday = time.localtime()
 
@@ -24,12 +25,12 @@ print("Current Date/Time: " + "{}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}".format(yea
 try:
   sd = SDCard(slot=2)
   uos.mount(sd, '/sd')
-  print("SD Card mounted")
+  print("SD card mounted")
   print("  " + str(os.listdir("/sd")))
 except:
   print ("No SD card present")
 
-# SD Card Pins
+# SD card Pins
 # CD DAT3 CS 5
 # CMD DI DIN MOSI 23
 # CLK SCLK 18
@@ -40,6 +41,18 @@ buzzer_pin = Pin(14, Pin.OUT)
 neopin_pin = Pin(21, Pin.OUT)
 lockRelay_pin = Pin(27, Pin.OUT)
 progButton_pin = Pin(12, Pin.IN, Pin.PULL_UP)
+exitButton_pin = Pin(32, Pin.IN, Pin.PULL_UP)
+bellButton_pin = Pin(33, Pin.IN, Pin.PULL_UP)
+magSensor = Pin(22, Pin.IN, Pin.PULL_UP)
+wiegand_0 = 25
+wiegand_1 = 26
+silent_mode = False
+
+# 1.1 wtinyPICO Pins - Uncomment if using board revision 1.1
+buzzer_pin = Pin(14, Pin.OUT)
+neopin_pin = Pin(21, Pin.OUT)
+lockRelay_pin = Pin(27, Pin.OUT)
+progButton_pin = Pin(4, Pin.IN, Pin.PULL_UP)
 exitButton_pin = Pin(32, Pin.IN, Pin.PULL_UP)
 bellButton_pin = Pin(33, Pin.IN, Pin.PULL_UP)
 magSensor = Pin(22, Pin.IN, Pin.PULL_UP)
@@ -61,31 +74,78 @@ silent_mode = False
 # Durations for each unlock type (eg: unlock for 10 seconds if unclocked via MQTT)
 exitBut_dur = 5000
 http_dur = 10000
-card_dur = 5000
+key_dur = 5000
 mqtt_dur = 10000
 addKey_dur = 15000
 add_hold_time = 2000
+sd_boot_hold_time = 3000
 add_mode = False
 add_mode_counter = 0
 add_mode_intervals = 10
 ip_address = "0.0.0.0"
+files = ["keys.cfg", "dl32.cfg"]
 
 # Set initial pin states
 buzzer_pin.value(0)
 lockRelay_pin.value(0)
 
-# Opening JSON file
-try:
-  with open('dl32.cfg') as json_file:
-    CONFIG_DICT = json.load(json_file)
-except:
-  print("ERROR: Could not load dl32.cfg into config dictionary")
-        
-try:
-  with open('keys.cfg') as json_file:
-    KEYS_DICT = json.load(json_file)
-except:
-  print("ERROR: Could not load keys.cfg into keys dictionary")
+CONFIG_DICT = {}
+KEYS_DICT = {}
+
+# Wipe config dictionary from memory
+def wipe_config():
+  global CONFIG_DICT
+  CONFIG_DICT = {}
+
+# Wipe key dictionary from memory
+def wipe_keys():
+  global KEYS_DICT
+  KEYS_DICT = {}
+
+# Load config file from ESP32
+def load_esp_config():
+  global CONFIG_DICT
+  try:
+    with open('dl32.cfg') as json_file:
+      CONFIG_DICT = json.load(json_file)
+      resync_html_content()
+  except:
+    print("ERROR: Could not load dl32.cfg into config dictionary")
+load_esp_config()
+
+# Load keys file from ESP32
+def load_esp_keys():
+  global KEYS_DICT
+  try:
+    with open('keys.cfg') as json_file:
+      KEYS_DICT = json.load(json_file)
+      resync_html_content()
+  except:
+    print("ERROR: Could not load keys.cfg into keys dictionary")
+load_esp_keys()
+
+
+# Load config file from SD card
+def load_sd_config():
+  global CONFIG_DICT
+  try:
+    with open('sd/dl32.cfg') as json_file:
+      wipe_config()
+      CONFIG_DICT = json.load(json_file)
+      resync_html_content()
+  except:
+    print("ERROR: Could not load sd/dl32.cfg into config dictionary")
+
+# Load keys file from SD card
+def load_sd_keys():
+  global KEYS_DICT
+  try:
+    with open('sd/keys.cfg') as json_file:
+      wipe_keys()
+      KEYS_DICT = json.load(json_file)
+      resync_html_content()
+  except:
+    print("ERROR: Could not load sd/keys.cfg into keys dictionary")
 
 WIFISSID = (CONFIG_DICT["wifi_ssid"])
 WIFIPASS = (CONFIG_DICT["wifi_pass"])
@@ -97,8 +157,9 @@ mqtt_pass = (CONFIG_DICT["mqtt_pass"]).encode('utf_8')
 mqtt_cmd_top = (CONFIG_DICT["mqtt_cmd_top"]).encode('utf_8')
 mqtt_sta_top = (CONFIG_DICT["mqtt_sta_top"]).encode('utf_8')
 web_port = (CONFIG_DICT["web_port"])
-CARD_NUMS = KEYS_DICT.keys()
+key_NUMS = KEYS_DICT.keys()
 
+# Check if a file exists
 def file_exists(filename):
     try:
         os.stat(filename)
@@ -106,6 +167,7 @@ def file_exists(filename):
     except OSError:
         return False
 
+# Connect to wifi using details from config file
 def connect_wifi():
   global ip_address
   sta_if = network.WLAN(network.STA_IF)
@@ -119,11 +181,13 @@ def connect_wifi():
   print('Connected to wifi SSID ' + WIFISSID)
   resync_html_content()
 
+# REfresh the date and time
 def refresh_time():
   global year, month, day, hour, mins, secs, weekday, yearday
   year, month, day, hour, mins, secs, weekday, yearday = time.localtime()
 
-def save_keys_to_SD():
+# Save key dictionary to SD card
+def save_keys_to_sd():
   if file_exists("sd/keys.cfg"):
       #rename old file
       refresh_time()
@@ -131,6 +195,34 @@ def save_keys_to_SD():
   with open('sd/keys.cfg', 'w') as json_file:
     json.dump(KEYS_DICT, json_file)
 
+# Save configuration dictionary to SD card
+def save_config_to_sd():
+  if file_exists("sd/dl32.cfg"):
+      #rename old file
+      refresh_time()
+      os.rename("sd/dl32.cfg", ("sd/dl32" + str("{}{:02d}{:02d}_{:02d}{:02d}{:02d}".format(year, month, day, hour, mins, secs) + ".cfg")))
+  with open('sd/dl32.cfg', 'w') as json_file:
+    json.dump(CONFIG_DICT, json_file)
+
+# Save key dictionary to ESP32
+def save_keys_to_esp():
+  if file_exists("keys.cfg"):
+      #rename old file
+      refresh_time()
+      os.rename("keys.cfg", ("keys" + str("{}{:02d}{:02d}_{:02d}{:02d}{:02d}".format(year, month, day, hour, mins, secs) + ".cfg")))
+  with open('keys.cfg', 'w') as json_file:
+    json.dump(KEYS_DICT, json_file)
+
+# Save configuration dictionary to ESP32
+def save_config_to_esp():
+  if file_exists("dl32.cfg"):
+      #rename old file
+      refresh_time()
+      os.rename("dl32.cfg", ("dl32" + str("{}{:02d}{:02d}_{:02d}{:02d}{:02d}".format(year, month, day, hour, mins, secs) + ".cfg")))
+  with open('dl32.cfg', 'w') as json_file:
+    json.dump(CONFIG_DICT, json_file)
+
+# Start Microdot Async web server
 def start_server():
   print('Starting web server on port ' + str(web_port))
   mqtt.publish(mqtt_sta_top, ('Starting web server on port ' + str(web_port)), retain=False, qos=0)
@@ -140,54 +232,80 @@ def start_server():
     web_server.shutdown()
     print('Failed to start web server')
 
-def add_key(card_number):
-  if (len(str(card_number)) > 1 and len(str(card_number)) < 7):
-    print ("  Adding key " + str(card_number))
+# Import keys from SD card into keys dictionary and overwrite keys.cfg on ESP32
+def import_keys_from_sd():
+  if file_exists("sd/keys.cfg"):
+    load_sd_keys()
+    if file_exists("keys.cfg"):
+      refresh_time()
+      os.rename("keys.cfg", "keys_" + (str("{}{:02d}{:02d}_{:02d}{:02d}{:02d}".format(year, month, day, hour, mins, secs))))
+      save_keys_to_esp()
+  else:
+    print("No file sd/" + filename + " on SD card")
+
+# Check for button commands at boot
+def check_boot():
+  global sd_boot_hold_time
+  while True:
+    if int(progButton_pin.value()) == 0:
+      time_held = 0
+      while (int(progButton_pin.value()) == 0 and time_held <= sd_boot_hold_time):
+        time.sleep_ms(10)
+        time_held += 10
+      if time_held > add_hold_time:
+        print('Loading configuration from SD card')
+
+# Add a new key to the autorized keys dictionary
+def add_key(key_number):
+  if (len(str(key_number)) > 1 and len(str(key_number)) < 7):
+    print ("  Adding key " + str(key_number))
     refresh_time()
-    KEYS_DICT[str(card_number)] = ("{}{:02d}{:02d}_{:02d}{:02d}{:02d}".format(year, month, day, hour, mins, secs))
+    KEYS_DICT[str(key_number)] = ("{}{:02d}{:02d}_{:02d}{:02d}{:02d}".format(year, month, day, hour, mins, secs))
     with open('keys.cfg', 'w') as json_file:
       json.dump(KEYS_DICT, json_file)
     print("  Key added to authorized list as: " + "{}{:02d}{:02d}_{:02d}{:02d}{:02d}".format(year, month, day, hour, mins, secs))
     resync_html_content()
   else:
-    print("  Unable to add key " + card_number)
+    print("  Unable to add key " + key_number)
     print("  Invalid key format - key not added")
 
-
-def on_card(card_number, facility_code, cards_read):
+# RFID key listener function
+def on_key(key_number, facility_code, keys_read):
   global add_mode
   global add_mode_counter
   global add_mode_intervals
-  print('Card detected')
-  if (str(card_number) in CARD_NUMS):
+  print('key detected')
+  if (str(key_number) in key_NUMS):
     if add_mode == False:
-      print ("  Authorized card: ")
-      print ("  Card #: " + str(card_number))
-      print ("  Card belongs to " + KEYS_DICT[str(card_number)])
-      unlock(card_dur)
+      print ("  Authorized key: ")
+      print ("  key #: " + str(key_number))
+      print ("  key belongs to " + KEYS_DICT[str(key_number)])
+      unlock(key_dur)
     else:
       add_mode = False
-      print ("  Card #" + str(card_number) + " is already authorized.")
+      print ("  key #" + str(key_number) + " is already authorized.")
       add_mode_counter = add_mode_intervals
   else:
     if add_mode == False:
-      print ("  Unauthorized card: ")
-      print ("  Card #: " + str(card_number))
+      print ("  Unauthorized key: ")
+      print ("  key #: " + str(key_number))
       print ("  Facility code: " + str(facility_code))
       invalidBeep()
     else:
-      add_key(card_number)
+      add_key(key_number)
       add_mode = False
       add_mode_counter = add_mode_intervals
 
-Wiegand(wiegand_0, wiegand_1, on_card)
+Wiegand(wiegand_0, wiegand_1, on_key)
 
+# MQTT callback function
 def sub_cb(topic, msg):
   print('Message arrived on topic ' + topic.decode('utf-8') + ': ' + msg.decode('utf-8'))
   if topic == mqtt_cmd_top:
     if msg.decode('utf-8') == "unlock":
       unlock(mqtt_dur)
 
+# Resync contents of static HTML webpage to take into account changes
 def resync_html_content():
   global html
   global ip_address
@@ -229,6 +347,7 @@ def resync_html_content():
 
 resync_html_content()
 
+# Print allowed keys to serial
 def print_keys():
   global KEYS_DICT
   if KEYS_DICT == {}:
@@ -237,6 +356,7 @@ def print_keys():
     for key in KEYS_DICT:
       print('  ' + key + ' - ' + KEYS_DICT[key])
 
+# Delete all allowed keys
 def purge_keys():
   global KEYS_DICT
   KEYS_DICT = {}
@@ -244,6 +364,7 @@ def purge_keys():
     json.dump(KEYS_DICT, json_file)
   resync_html_content()
 
+# Unlock for duration specified as argument
 def unlock(*args):
   unlockBeep()
   for dur in args:
@@ -254,8 +375,9 @@ def unlock(*args):
     lockRelay_pin.value(0)
     print('  Locked')
     mqtt.publish(mqtt_sta_top, "Locked", retain=False, qos=0)
-    
-async def monbut():
+
+# Async function to listen for exit button presses
+async def mon_exit_but():
   global add_hold_time
   while True:
     if int(exitButton_pin.value()) == 0:
@@ -271,23 +393,44 @@ async def monbut():
         print('Exit button pressed')
         unlock(exitBut_dur)
     await uasyncio.sleep_ms(50)
-    
-async def montop():
+
+# Async function to listen for proramming button presses
+async def mon_prog_but():
+  global add_hold_time
+  while True:
+    if int(progButton_pin.value()) == 0:
+      time_held = 0
+      while (int(progButton_pin.value()) == 0 and time_held <= add_hold_time):
+        time.sleep_ms(10)
+        time_held += 10
+      if time_held > add_hold_time:
+        print('copying SD to ESP')
+        prog_sd_beeps()
+        import_keys_from_sd()
+      else:
+        print('prog button pressed')
+    await uasyncio.sleep_ms(50)
+
+# Async function to listed for MQTT commands
+async def mon_cmd_topic():
   while True:
     mqtt.check_msg()
     await uasyncio.sleep_ms(50)
 
+# Async function to send PinReq messages to MQTT broker
 async def mqtt_ping():
   while True:
     mqtt.ping()
     await uasyncio.sleep(60)
 
+# Send hearbeat MQTT message every 30min
 async def mqtt_status():
   while True:
     print('Published status message to ' + mqtt_sta_top.decode('utf-8'))
-    mqtt.publish(mqtt_sta_top, "Stayin' alive!", retain=False, qos=0)
+    mqtt.publish(mqtt_sta_top, "Still alive!", retain=False, qos=0)
     await uasyncio.sleep(1800)
 
+# Play doorbel tone
 async def ring_bell():
   print ("  Ringing bell")
   mqtt.publish(mqtt_sta_top, "Ringing bell", retain=False, qos=0)
@@ -304,6 +447,7 @@ async def ring_bell():
     await uasyncio.sleep_ms(2000)
     loop1 +=1
 
+# Enter mode to add new key
 async def key_add_mode():
   global add_mode
   global add_mode_intervals
@@ -346,6 +490,22 @@ def lil_bip():
   time.sleep_ms(10)
   buzzer_pin.value(0)
 
+def prog_sd_beeps():
+  if silent_mode == False:
+    buzzer_pin.value(1)
+  time.sleep_ms(50)
+  buzzer_pin.value(0)
+  time.sleep_ms(50)
+  if silent_mode == False:
+    buzzer_pin.value(1)
+  time.sleep_ms(50)
+  buzzer_pin.value(0)
+  time.sleep_ms(50)
+  if silent_mode == False:
+    buzzer_pin.value(1)
+  time.sleep_ms(50)
+  buzzer_pin.value(0)
+
 # --------- MAIN -----------
 
 if silent_mode == True:
@@ -373,10 +533,11 @@ except:
 
 web_server = Microdot()
 
-uasyncio.create_task(monbut())
-uasyncio.create_task(montop())
+uasyncio.create_task(mon_prog_but())
+uasyncio.create_task(mon_exit_but())
+uasyncio.create_task(mon_cmd_topic())
 uasyncio.create_task(mqtt_ping())
-# uasyncio.create_task(mqtt_status())
+#uasyncio.create_task(mqtt_status())
 
 @web_server.route('/')
 def hello(request):
