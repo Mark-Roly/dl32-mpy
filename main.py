@@ -2,10 +2,12 @@ from microdot_asyncio import Microdot, send_file
 from umqtt.simple import MQTTClient
 from wiegand import Wiegand
 from machine import SDCard, WDT
+from utime import sleep
 import sdcard
 import machine
 import time
 import uasyncio
+from machine import Pin, PWM
 import os
 gc.collect()
 
@@ -27,10 +29,22 @@ print('Current Date/Time: ' + '{}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}'.format(yea
 # DAT0 D0 MISO 19
 
 # 1.1 Pins - Uncomment if using board revision 1.1
+# buzzer_pin = Pin(14, Pin.OUT)
+# neopin_pin = Pin(21, Pin.OUT)
+# lockRelay_pin = Pin(27, Pin.OUT)
+# progButton_pin = Pin(12, Pin.IN, Pin.PULL_UP)
+# exitButton_pin = Pin(32, Pin.IN, Pin.PULL_UP)
+# bellButton_pin = Pin(33, Pin.IN, Pin.PULL_UP)
+# magSensor = Pin(22, Pin.IN, Pin.PULL_UP)
+# wiegand_0 = 25
+# wiegand_1 = 26
+# sd = SDCard(slot=2)
+
+# 1.1 Pins w/TinyPico adapter - Uncomment if using board revision 1.1 with tinypico adapter
 buzzer_pin = Pin(14, Pin.OUT)
 neopin_pin = Pin(21, Pin.OUT)
 lockRelay_pin = Pin(27, Pin.OUT)
-progButton_pin = Pin(12, Pin.IN, Pin.PULL_UP)
+progButton_pin = Pin(4, Pin.IN, Pin.PULL_UP)
 exitButton_pin = Pin(32, Pin.IN, Pin.PULL_UP)
 bellButton_pin = Pin(33, Pin.IN, Pin.PULL_UP)
 magSensor = Pin(22, Pin.IN, Pin.PULL_UP)
@@ -62,6 +76,7 @@ sd = SDCard(slot=2)
 # sd = sdcard.SDCard(machine.SPI(1, sck=machine.Pin(5), mosi=machine.Pin(6), miso=machine.Pin(8)), machine.Pin(7))
 
 silent_mode = False
+stop_bell = False
 
 try:
   uos.mount(sd, '/sd')
@@ -408,7 +423,9 @@ def unlock(*args):
 def mon_exit_but():
   global add_hold_time
   global add_mode
+  global stop_bell
   if int(exitButton_pin.value()) == 0:
+    stop_bell = True
     time_held = 0
     while (int(exitButton_pin.value()) == 0 and time_held <= add_hold_time):
       time.sleep_ms(10)
@@ -424,7 +441,9 @@ def mon_exit_but():
 # Async function to listen for proramming button presses
 def mon_prog_but():
   global add_hold_time
+  global stop_bell
   if int(progButton_pin.value()) == 0:
+    stop_bell = True
     time_held = 0
     while (int(progButton_pin.value()) == 0 and time_held <= add_hold_time):
       time.sleep_ms(10)
@@ -461,12 +480,17 @@ async def mqtt_status():
 async def ring_bell():
   print ('  Ringing bell')
   mqtt.publish(mqtt_sta_top, 'Ringing bell', retain=False, qos=0)
+  global stop_bell
+  stop_bell = False
   loop1 = 0
   while loop1 <= 3:
     loop2 = 0
     while loop2 <= 30:
-      if silent_mode == False:
-        buzzer_pin.value(1)
+      if stop_bell == True:
+          return
+      if silent_mode == True:
+          return
+      buzzer_pin.value(1)
       await uasyncio.sleep_ms(10)
       buzzer_pin.value(0)
       await uasyncio.sleep_ms(10)
