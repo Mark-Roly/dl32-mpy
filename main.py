@@ -2,6 +2,7 @@ from microdot_asyncio import Microdot, send_file
 from umqtt.simple import MQTTClient
 from wiegand import Wiegand
 from machine import SDCard, WDT
+import sdcard
 import machine
 import time
 import uasyncio
@@ -10,7 +11,7 @@ gc.collect()
 
 wdt = WDT(timeout = 60000)
 
-_VERSION = const('20230703')
+_VERSION = const('20230824')
 
 year, month, day, hour, mins, secs, weekday, yearday = time.localtime()
 
@@ -18,15 +19,7 @@ print('DL32 - MicroPython Edition')
 print('Version: ' + _VERSION)
 print('Current Date/Time: ' + '{}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}'.format(year, month, day, hour, mins, secs))
 
-try:
-  sd = SDCard(slot=2)
-  uos.mount(sd, '/sd')
-  print('SD card mounted')
-  print('  ' + str(os.listdir('/sd')))
-except:
-  print ('No SD card present')
-
-# SD card Pins
+# 1.1 SD card Pins
 # CD DAT3 CS 5
 # CMD DI DIN MOSI 23
 # CLK SCLK 18
@@ -42,19 +35,7 @@ except:
 # magSensor = Pin(22, Pin.IN, Pin.PULL_UP)
 # wiegand_0 = 25
 # wiegand_1 = 26
-# silent_mode = False
-
-# 1.1 wtinyPICO Pins - Uncomment if using board revision 1.1
-buzzer_pin = Pin(14, Pin.OUT)
-neopin_pin = Pin(21, Pin.OUT)
-lockRelay_pin = Pin(27, Pin.OUT)
-progButton_pin = Pin(4, Pin.IN, Pin.PULL_UP)
-exitButton_pin = Pin(32, Pin.IN, Pin.PULL_UP)
-bellButton_pin = Pin(33, Pin.IN, Pin.PULL_UP)
-magSensor = Pin(22, Pin.IN, Pin.PULL_UP)
-wiegand_0 = 25
-wiegand_1 = 26
-silent_mode = False
+# sd = SDCard(slot=2)
 
 # 2.0 Pins - Uncomment if using S2 Mini board revision
 # buzzer_pin = Pin(14, Pin.OUT)
@@ -66,6 +47,27 @@ silent_mode = False
 # magSensor = Pin(11, Pin.IN, Pin.PULL_UP)
 # wiegand_0 = 16
 # wiegand_1 = 17
+
+# 3.0 Pins - Uncomment if using S3 Wemos board revision
+buzzer_pin = Pin(16, Pin.OUT)
+neopin_pin = Pin(13, Pin.OUT)
+lockRelay_pin = Pin(2, Pin.OUT)
+progButton_pin = Pin(8, Pin.IN, Pin.PULL_UP)
+exitButton_pin = Pin(9, Pin.IN, Pin.PULL_UP)
+bellButton_pin = Pin(11, Pin.IN, Pin.PULL_UP)
+magSensor = Pin(15, Pin.IN, Pin.PULL_UP)
+wiegand_0 = 12
+wiegand_1 = 10
+sd = sdcard.SDCard(machine.SPI(1, sck=machine.Pin(5), mosi=machine.Pin(6), miso=machine.Pin(8)), machine.Pin(7))
+
+silent_mode = False
+
+try:
+  uos.mount(sd, '/sd')
+  print('SD card mounted')
+  print('  ' + str(os.listdir('/sd')))
+except:
+  print ('No SD card present')
 
 # Durations for each unlock type (eg: unlock for 10 seconds if unclocked via MQTT)
 exitBut_dur = 5000
