@@ -26,16 +26,16 @@ print('Current Date/Time: ' + '{}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}'.format(yea
 # DAT0 D0 MISO 19
 
 # 1.1 Pins - Uncomment if using board revision 1.1
-# buzzer_pin = Pin(14, Pin.OUT)
-# neopin_pin = Pin(21, Pin.OUT)
-# lockRelay_pin = Pin(27, Pin.OUT)
-# progButton_pin = Pin(12, Pin.IN, Pin.PULL_UP)
-# exitButton_pin = Pin(32, Pin.IN, Pin.PULL_UP)
-# bellButton_pin = Pin(33, Pin.IN, Pin.PULL_UP)
-# magSensor = Pin(22, Pin.IN, Pin.PULL_UP)
-# wiegand_0 = 25
-# wiegand_1 = 26
-# sd = SDCard(slot=2)
+buzzer_pin = Pin(14, Pin.OUT)
+neopin_pin = Pin(21, Pin.OUT)
+lockRelay_pin = Pin(27, Pin.OUT)
+progButton_pin = Pin(12, Pin.IN, Pin.PULL_UP)
+exitButton_pin = Pin(32, Pin.IN, Pin.PULL_UP)
+bellButton_pin = Pin(33, Pin.IN, Pin.PULL_UP)
+magSensor = Pin(22, Pin.IN, Pin.PULL_UP)
+wiegand_0 = 25
+wiegand_1 = 26
+sd = SDCard(slot=2)
 
 # 2.0 Pins - Uncomment if using S2 Mini board revision
 # buzzer_pin = Pin(14, Pin.OUT)
@@ -49,16 +49,16 @@ print('Current Date/Time: ' + '{}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}'.format(yea
 # wiegand_1 = 17
 
 # 3.0 Pins - Uncomment if using S3 Wemos board revision
-buzzer_pin = Pin(16, Pin.OUT)
-neopin_pin = Pin(13, Pin.OUT)
-lockRelay_pin = Pin(2, Pin.OUT)
-progButton_pin = Pin(8, Pin.IN, Pin.PULL_UP)
-exitButton_pin = Pin(9, Pin.IN, Pin.PULL_UP)
-bellButton_pin = Pin(11, Pin.IN, Pin.PULL_UP)
-magSensor = Pin(15, Pin.IN, Pin.PULL_UP)
-wiegand_0 = 12
-wiegand_1 = 10
-sd = sdcard.SDCard(machine.SPI(1, sck=machine.Pin(5), mosi=machine.Pin(6), miso=machine.Pin(8)), machine.Pin(7))
+# buzzer_pin = Pin(16, Pin.OUT)
+# neopin_pin = Pin(13, Pin.OUT)
+# lockRelay_pin = Pin(2, Pin.OUT)
+# progButton_pin = Pin(8, Pin.IN, Pin.PULL_UP)
+# exitButton_pin = Pin(9, Pin.IN, Pin.PULL_UP)
+# bellButton_pin = Pin(11, Pin.IN, Pin.PULL_UP)
+# magSensor = Pin(15, Pin.IN, Pin.PULL_UP)
+# wiegand_0 = 12
+# wiegand_1 = 10
+# sd = sdcard.SDCard(machine.SPI(1, sck=machine.Pin(5), mosi=machine.Pin(6), miso=machine.Pin(8)), machine.Pin(7))
 
 silent_mode = False
 
@@ -261,7 +261,20 @@ def add_key(key_number):
     resync_html_content()
   else:
     print('  Unable to add key ' + key_number)
-    print('  Invalid key format - key not added')
+    print('  Invalid key!')
+
+# Add a new key to the autorized keys dictionary
+def rem_key(key_number):
+  if (len(str(key_number)) > 1 and len(str(key_number)) < 7) and (str(key_number) in KEYS_DICT):
+    print ('  Removing key ' + str(key_number))
+    del KEYS_DICT[str(key_number)]
+    with open('keys.cfg', 'w') as json_file:
+      json.dump(KEYS_DICT, json_file)
+    print('  Key '+ str(key_number) +' removed!')
+    resync_html_content()
+  else:
+    print('  Unable to remove key ' + key_number)
+    print('  Invalid key format - key not removed')
 
 # RFID key listener function
 def on_key(key_number, facility_code, keys_read):
@@ -305,6 +318,11 @@ def sub_cb(topic, msg):
 def resync_html_content():
   global html
   global ip_address
+  
+  rem_buttons = ""
+  for key in KEYS_DICT:
+      rem_buttons += '<a href="/rem_key/' + key + '"><button style="background-color:red;">Delete key ' + key + '(' + KEYS_DICT[key] + ')' + '</button> </a> <br/>'
+  
   html = """<!DOCTYPE html>
   <html>
     <head>
@@ -316,23 +334,24 @@ def resync_html_content():
         <a class='main_heading'>DL32 MENU</a></br/>
         <a style="font-size: 15px">--- MicroPython edition ---</a><br/>
         <a>by Mark Booth - markrolandbooth@gmail.com</a><br/><br/>
-        <a class='header'>Device Control<a/>
+        <a class='header'>Device Control</a>
         <a href='/unlock'><button>HTTP Unlock</button></a><br/>
         <a href='/bell'><button>Ring bell</button></a><br/>
         <a href='/reset'><button>Reset Board</button></a><br/><br/>
-        <a class='header'>Key Management<a/>
+        <a class='header'>Key Management</a>
         <a href='/print_keys'><button>List authorized keys</button></a><br/>
         <a href='/purge_keys'><button>Purge authorized keys</button></a><br/><br/>
-        <a class='header'>File Download<a/>
+        <a class='header'>File Download</a>
         <a href='/download/main.py'><button>Download main.py</button></a><br/>
         <a href='/download/boot.py'><button>Download boot.py</button></a><br/>
         <a href='/download/dl32.cfg'><button>Download dl32.cfg</button></a><br/>
         <a href='/download/keys.cfg'><button>Download keys.cfg</button></a><br/><br/>
+        <hr> <a class='header'>Delete Keys</a> <a style="color:red";><br/>***This cannot be undone!***</a>""" + rem_buttons + """
         <hr>
         <br/>
-        <a class='header'>keys.cfg JSON<a/>
+        <a class='header'>keys.cfg JSON</a>
         <textarea readonly style="height: 50px">""" + str(KEYS_DICT) + """</textarea><br/><br/>
-        <a class='header'>dl32.cfg JSON<a/>
+        <a class='header'>dl32.cfg JSON</a>
         <textarea readonly style="height: 100px">""" + str(CONFIG_DICT) + """</textarea>
         <br/>
         <a>Version """ + _VERSION + """ IP Address """ + str(ip_address) + """</a><br/>
@@ -582,6 +601,12 @@ def purge_keys_http(request):
 def content(request, key):
   print('Add key command recieved from WebUI ' + key)
   add_key(key)
+  return html, 200, {'Content-Type': 'text/html'}
+
+@web_server.route('/rem_key/<string:key>', methods=['GET', 'POST'])
+def content(request, key):
+  print('Remove key command recieved from WebUI ' + key)
+  rem_key(key)
   return html, 200, {'Content-Type': 'text/html'}
 
 start_server()
