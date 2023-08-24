@@ -9,6 +9,7 @@ import uasyncio
 import os
 gc.collect()
 
+# Watchdog timeout set @ 60sec
 wdt = WDT(timeout = 60000)
 
 _VERSION = const('20230824')
@@ -321,12 +322,12 @@ def resync_html_content():
   
   rem_buttons = ""
   for key in KEYS_DICT:
-      rem_buttons += '<a href="/rem_key/' + key + '"><button class="rem">Delete key ' + key + '  ' + '(' + KEYS_DICT[key] + ')' + '</button> </a> <br/>'
+      rem_buttons += '<a style="font-size: 15px;"> - ' + key + ' (' + KEYS_DICT[key] + ') </a> <a href="/rem_key/' + key + '  "><button class="rem">DEL</button> </a> <br/>'
   
   html = """<!DOCTYPE html>
   <html>
     <head>
-      <style>div {width: 350px; margin: 20px auto; text-align: center; border: 3px solid #32e1e1; background-color: #555555; left: auto; right: auto;}.header {font-family: Arial, Helvetica, sans-serif; font-size: 20px; color: #32e1e1;}button {width: 300px; background-color: #32e1e1; border: none; text-decoration: none;}button.rem {background-color: #C12200}button.rem:hover {background-color: red}input {width: 296px; border: none; text-decoration: none;}button:hover {width: 300px; background-color: #12c1c1; border: none; text-decoration: none;}.main_heading {font-family: Arial, Helvetica, sans-serif; color: #32e1e1; font-size: 30px;}h5 {font-family: Arial, Helvetica, sans-serif; color: #32e1e1;}label{font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #32e1e1;}a {font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #32e1e1;}textarea {background-color: #303030; font-size: 11px; width: 300px; height: 75px; resize: vertical; color: #32e1e1;}body {background-color: #303030; text-align: center;}</style>
+      <style>div {width: 350px; margin: 20px auto; text-align: center; border: 3px solid #32e1e1; background-color: #555555; left: auto; right: auto;}.header {font-family: Arial, Helvetica, sans-serif; font-size: 20px; color: #32e1e1;}button {width: 300px; background-color: #32e1e1; border: none; text-decoration: none;}button.rem {background-color: #C12200; width: 40px;}button.rem:hover {background-color: red}input {width: 296px; border: none; text-decoration: none;}button:hover {background-color: #12c1c1; border: none; text-decoration: none;}.main_heading {font-family: Arial, Helvetica, sans-serif; color: #32e1e1; font-size: 30px;}h5 {font-family: Arial, Helvetica, sans-serif; color: #32e1e1;}label{font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #32e1e1;}a {font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #32e1e1;}textarea {background-color: #303030; font-size: 11px; width: 300px; height: 75px; resize: vertical; color: #32e1e1;}body {background-color: #303030; text-align: center;}</style>
       <script>
       window.addKey = function(){
         var input = document.getElementById("myInput").value;
@@ -352,7 +353,8 @@ def resync_html_content():
         <a href='/download/boot.py'><button>Download boot.py</button></a><br/>
         <a href='/download/dl32.cfg'><button>Download dl32.cfg</button></a><br/>
         <a href='/download/keys.cfg'><button>Download keys.cfg</button></a><br/><br/>
-        <hr> <a class='header'>Delete Keys</a> <a style="color:#E01000";><br/>***This cannot be undone!***</a>""" + rem_buttons + """
+        <hr> <a class='header'>Delete Keys</a><br/><a style="color:#C02020; font-size: 15px; font-weight: bold;">***This cannot be undone!***</a>
+        <br/>""" + rem_buttons + """
         <br/>
         <hr> <a class='header'>Add Key</a><br/>
         <input id="myInput" value="">
