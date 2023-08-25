@@ -14,7 +14,7 @@ gc.collect()
 # Watchdog timeout set @ 60sec
 wdt = WDT(timeout = 60000)
 
-_VERSION = const('20230824')
+_VERSION = const('20230825')
 
 year, month, day, hour, mins, secs, weekday, yearday = time.localtime()
 
@@ -335,9 +335,10 @@ def resync_html_content():
   global html
   global ip_address
   
-  rem_buttons = ""
+  rem_buttons = '<table style="width: 300px; text-align: left; border: 0px solid black; border-collapse: collapse; margin-left: auto; margin-right: auto;">'
   for key in KEYS_DICT:
-      rem_buttons += '<a style="font-size: 15px;"> - ' + key + ' (' + KEYS_DICT[key] + ') </a> <a href="/rem_key/' + key + '  "><button class="rem">DEL</button> </a> <br/>'
+      rem_buttons += '<tr> <td> <a style="font-size: 15px;"> &bull; ' + key + ' (' + KEYS_DICT[key] + ') </a> </td><td> <a href="/rem_key/' + key + '  "> <button class="rem">DEL</button> </a> </td> </tr>'
+  rem_buttons += "</table>"
   
   html = """<!DOCTYPE html>
   <html>
@@ -355,7 +356,7 @@ def resync_html_content():
         <br/>
         <a class='main_heading'>DL32 MENU</a></br/>
         <a style="font-size: 15px">--- MicroPython edition ---</a><br/>
-        <a>by Mark Booth - markrolandbooth@gmail.com</a><br/><br/>
+        <a>by Mark Booth - </a><a href='https://github.com/Mark-Roly/DL32_mpy'>github.com/Mark-Roly/DL32_mpy</a><br/><br/>
         <a class='header'>Device Control</a>
         <a href='/unlock'><button>HTTP Unlock</button></a><br/>
         <a href='/bell'><button>Ring bell</button></a><br/>
