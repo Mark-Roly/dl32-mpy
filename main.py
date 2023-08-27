@@ -293,6 +293,17 @@ def rem_key(key_number):
     print('  Unable to remove key ' + key_number)
     print('  Invalid key format - key not removed')
 
+def ren_key(key, name):
+  if (len(str(key)) > 1 and len(str(key)) < 7) and (str(key) in KEYS_DICT) and (len(name) > 0) and (len(name) < 16) :
+    print ('  Renaming key ' + str(key) + ' to ' + name)
+    KEYS_DICT[str(key)] = name
+    with open('keys.cfg', 'w') as json_file:
+      json.dump(KEYS_DICT, json_file)
+    print('  Key '+ str(key) +' renamed!')
+    resync_html_content()
+  else:
+    print('  Unable to rename key ' + key)
+
 # RFID key listener function
 def on_key(key_number, facility_code, keys_read):
   global add_mode
@@ -336,19 +347,27 @@ def resync_html_content():
   global html
   global ip_address
   
-  rem_buttons = '<table style="width: 300px; text-align: left; border: 0px solid black; border-collapse: collapse; margin-left: auto; margin-right: auto;">'
+  rem_buttons = '<table style="width: 380px; text-align: left; border: 0px solid black; border-collapse: collapse; margin-left: auto; margin-right: auto;">'
   for key in KEYS_DICT:
-      rem_buttons += '<tr> <td> <a style="font-size: 15px;"> &bull; ' + key + ' (' + KEYS_DICT[key] + ') </a> </td><td> <a href="/rem_key/' + key + '  "> <button class="rem">DEL</button> </a> </td> </tr>'
+      rem_buttons += '<tr> <td style="width: 200px;"> <a style="font-size: 15px;"> &bull; ' + key + ' (' + KEYS_DICT[key] + ') </a> </td> <td> <input id="renKeyInput_' + key + '" class="renInput" value=""> <a> <button onClick="renKey('+key+')" class="ren">REN</button> </a> </td> <td> <a href="/rem_key/' + key + '  "> <button class="rem">DEL</button> </a> </td> </tr>'
   rem_buttons += "</table>"
   
   html = """<!DOCTYPE html>
   <html>
     <head>
-      <style>div {width: 350px; margin: 20px auto; text-align: center; border: 3px solid #32e1e1; background-color: #555555; left: auto; right: auto;}.header {font-family: Arial, Helvetica, sans-serif; font-size: 20px; color: #32e1e1;}button {width: 300px; background-color: #32e1e1; border: none; text-decoration: none;}button.rem {background-color: #C12200; width: 40px;}button.rem:hover {background-color: red}input {width: 296px; border: none; text-decoration: none;}button:hover {background-color: #12c1c1; border: none; text-decoration: none;}.main_heading {font-family: Arial, Helvetica, sans-serif; color: #32e1e1; font-size: 30px;}h5 {font-family: Arial, Helvetica, sans-serif; color: #32e1e1;}label{font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #32e1e1;}a {font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #32e1e1;}textarea {background-color: #303030; font-size: 11px; width: 300px; height: 75px; resize: vertical; color: #32e1e1;}body {background-color: #303030; text-align: center;}</style>
+      <style>div {width: 400px; margin: 20px auto; text-align: center; border: 3px solid #32e1e1; background-color: #555555; left: auto; right: auto;}.header {font-family: Arial, Helvetica, sans-serif; font-size: 20px; color: #32e1e1;}button {width: 300px; background-color: #32e1e1; border: none; text-decoration: none;}button.rem {background-color: #C12200; width: 40px;}button.rem:hover {background-color: red}button.ren {background-color: #ff9900; width: 40px;}button.ren:hover {background-color: #ffcc00}input {width: 296px; border: none; text-decoration: none;}button:hover {background-color: #12c1c1; border: none; text-decoration: none;} input.renInput{width: 75px} .main_heading {font-family: Arial, Helvetica, sans-serif; color: #32e1e1; font-size: 30px;}h5 {font-family: Arial, Helvetica, sans-serif; color: #32e1e1;}label{font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #32e1e1;}a {font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #32e1e1;}textarea {background-color: #303030; font-size: 11px; width: 300px; height: 75px; resize: vertical; color: #32e1e1;}body {background-color: #303030; text-align: center;}</style>
       <script>
       window.addKey = function(){
-        var input = document.getElementById("myInput").value;
+        var input = document.getElementById("addKeyInput").value;
         window.location.href = "/add_key/" + input;
+      }
+      </script>
+      <script>
+      window.renKey = function(key){
+        var inputid = "renKeyInput_" + key.toString()
+        console.log(inputid)
+        var input = document.getElementById(inputid).value;
+        window.location.href = "/ren_key/" + key + "/" + input;
       }
       </script>
     </head>
@@ -359,29 +378,32 @@ def resync_html_content():
         <a style="font-size: 15px">--- MicroPython edition ---</a><br/>
         <a>by Mark Booth - </a><a href='https://github.com/Mark-Roly/DL32_mpy'>github.com/Mark-Roly/DL32_mpy</a><br/><br/>
         <a class='header'>Device Control</a>
+        <br/>
         <a href='/unlock'><button>HTTP Unlock</button></a><br/>
         <a href='/bell'><button>Ring bell</button></a><br/>
         <a href='/reset'><button>Reset Board</button></a><br/><br/>
         <a class='header'>Key Management</a>
+        <br/>
         <a href='/print_keys'><button>List authorized keys</button></a><br/>
         <a href='/purge_keys'><button>Purge authorized keys</button></a><br/><br/>
         <a class='header'>File Download</a>
+        <br/>
         <a href='/download/main.py'><button>Download main.py</button></a><br/>
         <a href='/download/boot.py'><button>Download boot.py</button></a><br/>
         <a href='/download/dl32.cfg'><button>Download dl32.cfg</button></a><br/>
         <a href='/download/keys.cfg'><button>Download keys.cfg</button></a><br/><br/>
-        <hr> <a class='header'>Delete Keys</a><br/><a style="color:#C02020; font-size: 15px; font-weight: bold;">***This cannot be undone!***</a>
+        <hr> <a class='header'>Delete/Rename Keys</a><br/><a style="color:#ffcc00; font-size: 15px; font-weight: bold;">***This cannot be undone!***</a>
         <br/>""" + rem_buttons + """
         <br/>
         <hr> <a class='header'>Add Key</a><br/>
-        <input id="myInput" value="">
+        <input id="addKeyInput" value="">
         <button onClick="addKey()">Add</button>
         <br/>
         <br/>
         <hr>
-        <a class='header'>keys.cfg JSON</a>
+        <a class='header'>keys.cfg JSON</a><br/>
         <textarea readonly style="height: 50px">""" + str(KEYS_DICT) + """</textarea><br/><br/>
-        <a class='header'>dl32.cfg JSON</a>
+        <a class='header'>dl32.cfg JSON</a><br/>
         <textarea readonly style="height: 100px">""" + str(CONFIG_DICT) + """</textarea>
         <br/>
         <a>Version """ + _VERSION + """ IP Address """ + str(ip_address) + """</a><br/>
@@ -650,6 +672,12 @@ def content(request, key):
 def content(request, key):
   print('Remove key command recieved from WebUI ' + key)
   rem_key(key)
+  return html, 200, {'Content-Type': 'text/html'}
+
+@web_server.route('/ren_key/<string:key>/<string:name>', methods=['GET', 'POST'])
+def content(request, key, name):
+  print('Rename key command recieved from WebUI  to rename ' + key + ' to ' + name)
+  ren_key(key, name)
   return html, 200, {'Content-Type': 'text/html'}
 
 start_server()
