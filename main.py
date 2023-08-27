@@ -14,7 +14,7 @@ gc.collect()
 # Watchdog timeout set @ 60sec
 wdt = WDT(timeout = 60000)
 
-_VERSION = const('20230825')
+_VERSION = const('20230827')
 
 year, month, day, hour, mins, secs, weekday, yearday = time.localtime()
 
@@ -78,6 +78,7 @@ sd = SDCard(slot=2)
 silent_mode = False
 stop_bell = False
 
+# Try mounting SD card and list contents. Catch error.
 try:
   uos.mount(sd, '/sd')
   print('SD card mounted')
@@ -409,16 +410,15 @@ def purge_keys():
   resync_html_content()
 
 # Unlock for duration specified as argument
-def unlock(*args):
+def unlock(dur):
+  lockRelay_pin.value(1)
   unlockBeep()
-  for dur in args:
-    lockRelay_pin.value(1)
-    print('  Unlocked')
-    mqtt.publish(mqtt_sta_top, 'Unlocked', retain=False, qos=0)
-    time.sleep_ms(dur)
-    lockRelay_pin.value(0)
-    print('  Locked')
-    mqtt.publish(mqtt_sta_top, 'Locked', retain=False, qos=0)
+  print('  Unlocked')
+  mqtt.publish(mqtt_sta_top, 'Unlocked', retain=False, qos=0)
+  time.sleep_ms(dur)
+  lockRelay_pin.value(0)
+  print('  Locked')
+  mqtt.publish(mqtt_sta_top, 'Locked', retain=False, qos=0)
 
 # Async function to listen for exit button presses
 def mon_exit_but():
@@ -516,45 +516,50 @@ def key_add_mode():
     print('No key detected.')
     key_add_mode == False
 
+# "Beep-Beep"
 def unlockBeep():
-  if silent_mode == False:
-    buzzer_pin.value(1)
+  if silent_mode == True:
+    return
+  buzzer_pin.value(1)
   time.sleep_ms(75)
   buzzer_pin.value(0)
   time.sleep_ms(100)
-  if silent_mode == False:
-    buzzer_pin.value(1)
+  buzzer_pin.value(1)
+  time.sleep_ms(75)
   buzzer_pin.value(0)
 
+# "Beeeep-Beeeep"
 def invalidBeep():
-  if silent_mode == False:
-    buzzer_pin.value(1)
-  time.sleep_ms(1000)
+  if silent_mode == True:
+    return
+  buzzer_pin.value(1)
+  time.sleep_ms(500)
   buzzer_pin.value(0)
-  if silent_mode == False:
-    buzzer_pin.value(1)
-  time.sleep_ms(1000)
+  time.sleep_ms(100)
+  buzzer_pin.value(1)
+  time.sleep_ms(500)
   buzzer_pin.value(0)
 
+# "Bip"
 def lil_bip():
-  if silent_mode == False:
-    buzzer_pin.value(1)
+  if silent_mode == True:
+    return
+  buzzer_pin.value(1)
   time.sleep_ms(10)
   buzzer_pin.value(0)
 
 def prog_sd_beeps():
-  if silent_mode == False:
-    buzzer_pin.value(1)
+  if silent_mode == True:
+    return
+  buzzer_pin.value(1)
   time.sleep_ms(50)
   buzzer_pin.value(0)
   time.sleep_ms(50)
-  if silent_mode == False:
-    buzzer_pin.value(1)
+  buzzer_pin.value(1)
   time.sleep_ms(50)
   buzzer_pin.value(0)
   time.sleep_ms(50)
-  if silent_mode == False:
-    buzzer_pin.value(1)
+  buzzer_pin.value(1)
   time.sleep_ms(50)
   buzzer_pin.value(0)
 
@@ -564,9 +569,9 @@ async def main_loop():
   while True:
     wdt.feed()
     mon_exit_but()
-    mon_cmd_topic()
     mon_prog_but()
-    await uasyncio.sleep_ms(20)
+    mon_cmd_topic()
+    await uasyncio.sleep_ms(10)
   
 if silent_mode == True:
   print('Silent Mode Activated')
