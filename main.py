@@ -355,7 +355,7 @@ def resync_html_content():
   html = """<!DOCTYPE html>
   <html>
     <head>
-      <style>div {width: 400px; margin: 20px auto; text-align: center; border: 3px solid #32e1e1; background-color: #555555; left: auto; right: auto;}.header {font-family: Arial, Helvetica, sans-serif; font-size: 20px; color: #32e1e1;}button {width: 300px; background-color: #32e1e1; border: none; text-decoration: none;}button.rem {background-color: #C12200; width: 40px;}button.rem:hover {background-color: red}button.ren {background-color: #ff9900; width: 40px;}button.ren:hover {background-color: #ffcc00}input {width: 296px; border: none; text-decoration: none;}button:hover {background-color: #12c1c1; border: none; text-decoration: none;} input.renInput{width: 75px} .main_heading {font-family: Arial, Helvetica, sans-serif; color: #32e1e1; font-size: 30px;}h5 {font-family: Arial, Helvetica, sans-serif; color: #32e1e1;}label{font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #32e1e1;}a {font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #32e1e1;}textarea {background-color: #303030; font-size: 11px; width: 300px; height: 75px; resize: vertical; color: #32e1e1;}body {background-color: #303030; text-align: center;}</style>
+      <style>div {width: 400px; margin: 20px auto; text-align: center; border: 3px solid #32e1e1; background-color: #555555; left: auto; right: auto;}.header {font-family: Arial, Helvetica, sans-serif; font-size: 20px; color: #32e1e1;}button {width: 395px; background-color: #32e1e1; border: none; text-decoration: none; }button.rem {background-color: #C12200; width: 40px;}button.rem:hover {background-color: red}button.ren {background-color: #ff9900; width: 40px;}button.ren:hover {background-color: #ffcc00}input {width: 296px; border: none; text-decoration: none;}button:hover {background-color: #12c1c1; border: none; text-decoration: none;} input.renInput{width: 75px} .addKey {width: 60px;} .main_heading {font-family: Arial, Helvetica, sans-serif; color: #32e1e1; font-size: 30px;}h5 {font-family: Arial, Helvetica, sans-serif; color: #32e1e1;}label{font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #32e1e1;}a {font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #32e1e1;}textarea {background-color: #303030; font-size: 11px; width: 394px; height: 75px; resize: vertical; color: #32e1e1;}body {background-color: #303030; text-align: center;}</style>
       <script>
       window.addKey = function(){
         var input = document.getElementById("addKeyInput").value;
@@ -375,7 +375,7 @@ def resync_html_content():
       <div>
         <br/>
         <a class='main_heading'>DL32 MENU</a></br/>
-        <a style="font-size: 15px">--- MicroPython edition ---</a><br/>
+        <a style="font-size: 15px">--- MicroPython Edition ---</a><br/>
         <a>by Mark Booth - </a><a href='https://github.com/Mark-Roly/DL32_mpy'>github.com/Mark-Roly/DL32_mpy</a><br/><br/>
         <a class='header'>Device Control</a>
         <br/>
@@ -394,11 +394,10 @@ def resync_html_content():
         <a href='/download/keys.cfg'><button>Download keys.cfg</button></a><br/><br/>
         <hr> <a class='header'>Delete/Rename Keys</a><br/><a style="color:#ffcc00; font-size: 15px; font-weight: bold;">***This cannot be undone!***</a>
         <br/>""" + rem_buttons + """
-        <br/>
-        <hr> <a class='header'>Add Key</a><br/>
-        <input id="addKeyInput" value="">
-        <button onClick="addKey()">Add</button>
-        <br/>
+        <hr>
+        <a class='header'>Add Key</a><br/>
+        <input id="addKeyInput" value="" class="addKey">
+        <button onClick="addKey()" class="addKey">Add</button>
         <br/>
         <hr>
         <a class='header'>keys.cfg JSON</a><br/>
