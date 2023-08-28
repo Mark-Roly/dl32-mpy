@@ -106,6 +106,20 @@ lockRelay_pin.value(0)
 CONFIG_DICT = {}
 KEYS_DICT = {}
 
+# Function for copying files
+def copy(s, t):
+    try: 
+        if os.stat(t)[0] & 0x4000:  # is directory
+            t = t.rstrip("/") + "/" + s
+    except OSError:
+        pass
+    with open(s, "rb") as s:
+        with open(t, "wb") as t:
+            while True:
+                l = s.read(512)
+                if not l: break
+                t.write(l)
+
 # Wipe config dictionary from memory
 def wipe_config():
   global CONFIG_DICT
@@ -124,6 +138,7 @@ def load_esp_config():
       CONFIG_DICT = json.load(json_file)
   except:
     print('ERROR: Could not load dl32.cfg into config dictionary')
+    
 load_esp_config()
 
 # Load keys file from ESP32
@@ -134,6 +149,7 @@ def load_esp_keys():
       KEYS_DICT = json.load(json_file)
   except:
     print('ERROR: Could not load keys.cfg into keys dictionary')
+    
 load_esp_keys()
 
 # Load config file from SD card
@@ -158,8 +174,8 @@ def load_sd_keys():
   except:
     print('ERROR: Could not load sd/keys.cfg into keys dictionary')
 
-WIFISSID = (CONFIG_DICT['wifi_ssid'])
-WIFIPASS = (CONFIG_DICT['wifi_pass'])
+wifi_ssid= (CONFIG_DICT['wifi_ssid'])
+wifi_pass = (CONFIG_DICT['wifi_pass'])
 mqtt_clid = (CONFIG_DICT['mqtt_clid'])
 mqtt_brok = (CONFIG_DICT['mqtt_brok'])
 mqtt_port = (CONFIG_DICT['mqtt_port'])
@@ -184,12 +200,12 @@ def connect_wifi():
   sta_if = network.WLAN(network.STA_IF)
   if not sta_if.isconnected():
     sta_if.active(True)
-    sta_if.connect(WIFISSID, WIFIPASS)
+    sta_if.connect(wifi_ssid, wifi_pass)
     while not sta_if.isconnected():
       pass # wait till connection
   ip_address = sta_if.ifconfig()[0]
   print('IP address: ' + ip_address)
-  print('Connected to wifi SSID ' + WIFISSID)
+  print('Connected to wifi SSID ' + wifi_ssid)
   resync_html_content()
 
 # REfresh the date and time
@@ -271,10 +287,12 @@ def add_key(key_number):
   if (len(str(key_number)) > 1 and len(str(key_number)) < 7):
     print ('  Adding key ' + str(key_number))
     refresh_time()
-    KEYS_DICT[str(key_number)] = ('{}{:02d}{:02d}_{:02d}{:02d}{:02d}'.format(year, month, day, hour, mins, secs))
+    date_time = ('{}{:02d}{:02d}_{:02d}{:02d}{:02d}'.format(year, month, day, hour, mins, secs))
+    KEYS_DICT[str(key_number)] = date_time
     with open('keys.cfg', 'w') as json_file:
       json.dump(KEYS_DICT, json_file)
-    print('  Key added to authorized list as: ' + '{}{:02d}{:02d}_{:02d}{:02d}{:02d}'.format(year, month, day, hour, mins, secs))
+    print('  Key ' + str(key_number) + ' added to authorized list as: ' + date_time)
+    mqtt.publish(mqtt_sta_top, 'Key ' + str(key_number) + ' added to authorized list as ' + date_time, retain=False, qos=0)
     resync_html_content()
   else:
     print('  Unable to add key ' + key_number)
@@ -288,6 +306,7 @@ def rem_key(key_number):
     with open('keys.cfg', 'w') as json_file:
       json.dump(KEYS_DICT, json_file)
     print('  Key '+ str(key_number) +' removed!')
+    mqtt.publish(mqtt_sta_top, 'Key ' + str(key_number) + ' removed from authorized list', retain=False, qos=0)
     resync_html_content()
   else:
     print('  Unable to remove key ' + key_number)
@@ -300,6 +319,7 @@ def ren_key(key, name):
     with open('keys.cfg', 'w') as json_file:
       json.dump(KEYS_DICT, json_file)
     print('  Key '+ str(key) +' renamed!')
+    mqtt.publish(mqtt_sta_top, 'Key ' + str(key) + ' renamed to ' + name, retain=False, qos=0)
     resync_html_content()
   else:
     print('  Unable to rename key ' + key)
@@ -315,6 +335,7 @@ def on_key(key_number, facility_code, keys_read):
       print ('  Authorized key: ')
       print ('  key #: ' + str(key_number))
       print ('  key belongs to ' + KEYS_DICT[str(key_number)])
+      mqtt.publish(mqtt_sta_top, 'Authorized key ' + str(key_number) + ' (' + KEYS_DICT[str(key_number)] + ') scanned', retain=False, qos=0)
       unlock(key_dur)
     else:
       add_mode = False
@@ -325,6 +346,7 @@ def on_key(key_number, facility_code, keys_read):
       print ('  Unauthorized key: ')
       print ('  key #: ' + str(key_number))
       print ('  Facility code: ' + str(facility_code))
+      mqtt.publish(mqtt_sta_top, 'Unauthorized key ' + str(key_number) + ' scanned', retain=False, qos=0)
       invalidBeep()
     else:
       add_key(key_number)
@@ -344,7 +366,7 @@ def sub_cb(topic, msg):
 
 # Resync contents of static HTML webpage to take into account changes
 def resync_html_content():
-  global html
+  global main_html
   global ip_address
   
   rem_buttons = '<table style="width: 380px; text-align: left; border: 0px solid black; border-collapse: collapse; margin-left: auto; margin-right: auto;">'
@@ -352,7 +374,7 @@ def resync_html_content():
       rem_buttons += '<tr> <td style="width: 200px;"> <a style="font-size: 15px;"> &bull; ' + key + ' (' + KEYS_DICT[key] + ') </a> </td> <td> <input id="renKeyInput_' + key + '" class="renInput" value=""> <a> <button onClick="renKey('+key+')" class="ren">REN</button> </a> </td> <td> <a href="/rem_key/' + key + '  "> <button class="rem">DEL</button> </a> </td> </tr>'
   rem_buttons += "</table>"
   
-  html = """<!DOCTYPE html>
+  main_html = """<!DOCTYPE html>
   <html>
     <head>
       <style>div {width: 400px; margin: 20px auto; text-align: center; border: 3px solid #32e1e1; background-color: #555555; left: auto; right: auto;}.header {font-family: Arial, Helvetica, sans-serif; font-size: 20px; color: #32e1e1;}button {width: 395px; background-color: #32e1e1; border: none; text-decoration: none; }button.rem {background-color: #C12200; width: 40px;}button.rem:hover {background-color: red}button.ren {background-color: #ff9900; width: 40px;}button.ren:hover {background-color: #ffcc00}input {width: 296px; border: none; text-decoration: none;}button:hover {background-color: #12c1c1; border: none; text-decoration: none;} input.renInput{width: 75px} .addKey {width: 60px;} .main_heading {font-family: Arial, Helvetica, sans-serif; color: #32e1e1; font-size: 30px;}h5 {font-family: Arial, Helvetica, sans-serif; color: #32e1e1;}label{font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #32e1e1;}a {font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #32e1e1;}textarea {background-color: #303030; font-size: 11px; width: 394px; height: 75px; resize: vertical; color: #32e1e1;}body {background-color: #303030; text-align: center;}</style>
@@ -391,11 +413,12 @@ def resync_html_content():
         <a href='/download/main.py'><button>Download main.py</button></a><br/>
         <a href='/download/boot.py'><button>Download boot.py</button></a><br/>
         <a href='/download/dl32.cfg'><button>Download dl32.cfg</button></a><br/>
-        <a href='/download/keys.cfg'><button>Download keys.cfg</button></a><br/><br/>
-        <hr> <a class='header'>Delete/Rename Keys</a><br/><a style="color:#ffcc00; font-size: 15px; font-weight: bold;">***This cannot be undone!***</a>
+        <a href='/download/keys.cfg'><button>Download keys.cfg</button></a><br/><br/><br/>
+        <a href='/config'><button>Configure</button></a>
+        <hr> <a class='header'>Rename/Delete Keys</a><br/><a style="color:#ffcc00; font-size: 15px; font-weight: bold;">***This cannot be undone!***</a>
         <br/>""" + rem_buttons + """
         <hr>
-        <a class='header'>Add Key</a><br/>
+        <a class='header'>Add Key</a> <br/>
         <input id="addKeyInput" value="" class="addKey">
         <button onClick="addKey()" class="addKey">Add</button>
         <br/>
@@ -412,6 +435,64 @@ def resync_html_content():
   </html>"""
 
 resync_html_content()
+
+# Resync contents of static HTML webpage to take into account changes
+def resync_config_content():
+  global config_html
+  global ip_address
+  
+  config_html = """<!DOCTYPE html>
+  <html>
+    <head>
+      <style>div {width: 400px; margin: 20px auto; text-align: center; border: 3px solid #32e1e1; background-color: #555555; left: auto; right: auto;}.header {font-family: Arial, Helvetica, sans-serif; font-size: 20px; color: #32e1e1;} .backNav {width: 50px; float: left;} .saveConf{width: 150px; disabled: true;} .config_input{width: 150px;} button {width: 395px; background-color: #32e1e1; border: none; text-decoration: none; }button.rem {background-color: #C12200; width: 40px;}button.rem:hover {background-color: red}button.ren {background-color: #ff9900; width: 40px;}button.ren:hover {background-color: #ffcc00}input {width: 296px; border: none; text-decoration: none;}button:hover {background-color: #12c1c1; border: none; text-decoration: none;} input.renInput{width: 75px} .addKey {width: 60px;} .main_heading {font-family: Arial, Helvetica, sans-serif; color: #32e1e1; font-size: 30px;}h5 {font-family: Arial, Helvetica, sans-serif; color: #32e1e1;}label{font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #32e1e1;}a {font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #32e1e1;}textarea {background-color: #303030; font-size: 11px; width: 394px; height: 75px; resize: vertical; color: #32e1e1;}body {background-color: #303030; text-align: center;}</style>
+      <script>
+      window.saveConf = function(){
+        var wifi_ssid = document.getElementById("wifi_ssid").value;
+        var wifi_pass = document.getElementById("wifi_pass").value;
+        var web_port = document.getElementById("web_port").value;
+        var mqtt_brok = document.getElementById("mqtt_brok").value;
+        var mqtt_port = document.getElementById("mqtt_port").value;
+        var mqtt_clid = document.getElementById("mqtt_clid").value;
+        var mqtt_user = document.getElementById("mqtt_user").value;
+        var mqtt_pass = document.getElementById("mqtt_pass").value;
+        var mqtt_sta_top = document.getElementById("mqtt_sta_top").value;
+        var mqtt_cmd_top = document.getElementById("mqtt_cmd_top").value;
+        
+        window.location.href = "/config/";
+      }
+      </script>
+    </head>
+    <body>
+      <div>
+        <a href="/"><button class="backNav">Back</button></a><br/>
+        <a class='main_heading'>DL32 MENU</a></br/>
+        <a style="font-size: 15px">--- MicroPython Edition ---</a><br/>
+        <a>by Mark Booth - </a><a href='https://github.com/Mark-Roly/DL32_mpy'>github.com/Mark-Roly/DL32_mpy</a><br/><br/>
+        <a class='header'>Configuration</a>
+        <br/> <br/>
+        <form action="" method="GET">
+          <table style="width: 300px; text-align: left; border: 0px solid black; border-collapse: collapse; margin-left: auto; margin-right: auto;">
+            <tr> <td> <a>Wifi SSID:</a> </td> <td> <input id="wifi_ssid" name="wifi_ssid" class="config_input" value=""" + str(wifi_ssid) + """> </td> </tr>
+            <tr> <td> <a>Wifi password:</a> </td> <td> <input id="wifi_pass" name="wifi_pass" class="config_input" value=""" + str(wifi_pass) + """> </td> </tr>
+            <tr> <td> <a>WebUI port:</a> </td> <td> <input id="web_port" name="web_port" class="config_input" value=""" + str(web_port) + """> </td> </tr>
+            <tr> <td> <a>MQTT broker:</a> </td> <td> <input id="mqtt_brok" name="mqtt_brok" class="config_input" value=""" + str(mqtt_brok) + """> </td> </tr>
+            <tr> <td> <a>MQTT port:</a> </td> <td> <input id="mqtt_port" name="mqtt_port" class="config_input" value=""" + str(mqtt_port) + """> </td> </tr>
+            <tr> <td> <a>MQTT id:</a> </td> <td> <input id="mqtt_clid" name="mqtt_clid" class="config_input" value=""" + str(mqtt_clid) + """> </td> </tr>
+            <tr> <td> <a>MQTT user:</a> </td> <td> <input id="mqtt_user" name="mqtt_user" class="config_input" value=""" + CONFIG_DICT['mqtt_user'] + """> </td> </tr>
+            <tr> <td> <a>MQTT password:</a> </td> <td> <input id="mqtt_pass" name="mqtt_pass" class="config_input" value=""" + CONFIG_DICT['mqtt_pass'] + """> </td> </tr>
+            <tr> <td> <a>MQTT status topic:</a> </td> <td> <input id="mqtt_sta_top" name="mqtt_sta_top" class="config_input" value=""" + CONFIG_DICT['mqtt_sta_top'] + """> </td> </tr>
+            <tr> <td> <a>MQTT command topic:</a> </td> <td> <input id="mqtt_cmd_top" name="mqtt_cmd_top" class="config_input" value=""" + CONFIG_DICT['mqtt_cmd_top'] + """> </td> </tr>
+          </table>
+        <br/>
+        <button class="saveConf" type="submit">Save</button><br/>
+        <br/>
+        <a>Version """ + _VERSION + """ IP Address """ + str(ip_address) + """</a><br/>
+        <br/>
+      </div>
+    </body>
+  </html>"""
+  
+resync_config_content()
 
 # Print allowed keys to serial
 def print_keys():
@@ -458,6 +539,7 @@ def mon_exit_but():
       add_mode == True
     elif add_mode == False:
       print('Exit button pressed')
+      mqtt.publish(mqtt_sta_top, 'Exit button pressed', retain=False, qos=0)
       unlock(exitBut_dur)
 
 # Async function to listen for proramming button presses
@@ -479,6 +561,7 @@ def mon_prog_but():
       except:
         print('ERROR: Import from SD failed!')
     else:
+      mqtt.publish(mqtt_sta_top, 'Prog button pressed', retain=False, qos=0)
       print('prog button pressed')
 
 # Async function to listed for MQTT commands
@@ -625,25 +708,29 @@ uasyncio.create_task(mqtt_ping())
 
 @web_server.route('/')
 def hello(request):
-  return html, 200, {'Content-Type': 'text/html'}
+  return main_html, 200, {'Content-Type': 'text/html'}
+
+@web_server.route('/config')
+def config(request):
+  return config_html, 200, {'Content-Type': 'text/html'}
 
 @web_server.route('/unlock')
 def unlock_http(request):
   print('Unlock command recieved from WebUI')
   unlock(http_dur)
-  return html, 200, {'Content-Type': 'text/html'}
+  return main_html, 200, {'Content-Type': 'text/html'}
 
 @web_server.route('/reset')
 def reset_http(request):
   print('Reset command recieved from WebUI')
   machine.reset()
-  return html, 200, {'Content-Type': 'text/html'}
+  return main_html, 200, {'Content-Type': 'text/html'}
 
 @web_server.route('/bell')
 async def bell_http(request):
   print('Bell command recieved from WebUI')
   uasyncio.create_task(ring_bell())
-  return html, 200, {'Content-Type': 'text/html'}
+  return main_html, 200, {'Content-Type': 'text/html'}
 
 @web_server.route('/download/<string:filename>', methods=['GET', 'POST'])
 def dl_file(request, filename):
@@ -653,30 +740,30 @@ def dl_file(request, filename):
 def print_keys_http(request):
   print('Print keys command recieved from WebUI')
   print_keys()
-  return html, 200, {'Content-Type': 'text/html'}
+  return main_html, 200, {'Content-Type': 'text/html'}
 
 @web_server.route('/purge_keys')
 def purge_keys_http(request):
   print('Purge keys command recieved from WebUI')
   purge_keys()
-  return html, 200, {'Content-Type': 'text/html'}
+  return main_html, 200, {'Content-Type': 'text/html'}
 
 @web_server.route('/add_key/<string:key>', methods=['GET', 'POST'])
 def content(request, key):
   print('Add key command recieved from WebUI ' + key)
   add_key(key)
-  return html, 200, {'Content-Type': 'text/html'}
+  return main_html, 200, {'Content-Type': 'text/html'}
 
 @web_server.route('/rem_key/<string:key>', methods=['GET', 'POST'])
 def content(request, key):
   print('Remove key command recieved from WebUI ' + key)
   rem_key(key)
-  return html, 200, {'Content-Type': 'text/html'}
+  return main_html, 200, {'Content-Type': 'text/html'}
 
 @web_server.route('/ren_key/<string:key>/<string:name>', methods=['GET', 'POST'])
 def content(request, key, name):
   print('Rename key command recieved from WebUI  to rename ' + key + ' to ' + name)
   ren_key(key, name)
-  return html, 200, {'Content-Type': 'text/html'}
+  return main_html, 200, {'Content-Type': 'text/html'}
 
 start_server()
