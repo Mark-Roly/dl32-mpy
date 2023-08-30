@@ -98,10 +98,13 @@ add_mode = False
 add_mode_counter = 0
 add_mode_intervals = 10
 ip_address = '0.0.0.0'
+opening_type = 'door'
+magnetic_sensor_present = True
 
 # Set initial pin states
 buzzer_pin.value(0)
 lockRelay_pin.value(0)
+mag_state = 0
 
 CONFIG_DICT = {}
 KEYS_DICT = {}
@@ -444,7 +447,7 @@ def resync_config_content():
   config_html = """<!DOCTYPE html>
   <html>
     <head>
-      <style>div {width: 400px; margin: 20px auto; text-align: center; border: 3px solid #32e1e1; background-color: #555555; left: auto; right: auto;}.header {font-family: Arial, Helvetica, sans-serif; font-size: 20px; color: #32e1e1;} .backNav {width: 50px; float: left;} .saveConf{width: 150px; disabled: true;} .config_input{width: 150px;} button {width: 395px; background-color: #32e1e1; border: none; text-decoration: none; }button.rem {background-color: #C12200; width: 40px;}button.rem:hover {background-color: red}button.ren {background-color: #ff9900; width: 40px;}button.ren:hover {background-color: #ffcc00}input {width: 296px; border: none; text-decoration: none;}button:hover {background-color: #12c1c1; border: none; text-decoration: none;} input.renInput{width: 75px} .addKey {width: 60px;} .main_heading {font-family: Arial, Helvetica, sans-serif; color: #32e1e1; font-size: 30px;}h5 {font-family: Arial, Helvetica, sans-serif; color: #32e1e1;}label{font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #32e1e1;}a {font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #32e1e1;}textarea {background-color: #303030; font-size: 11px; width: 394px; height: 75px; resize: vertical; color: #32e1e1;}body {background-color: #303030; text-align: center;}</style>
+      <style>div {width: 400px; margin: 20px auto; text-align: center; border: 3px solid #32e1e1; background-color: #555555; left: auto; right: auto;}.header {font-family: Arial, Helvetica, sans-serif; font-size: 20px; color: #32e1e1;} .backNav {width: 50px; float: left;} .saveConf{width: 150px; } .config_input{width: 150px;} button {width: 395px; background-color: #32e1e1; border: none; text-decoration: none; }button.rem {background-color: #C12200; width: 40px;}button.rem:hover {background-color: red}button.ren {background-color: #ff9900; width: 40px;}button.ren:hover {background-color: #ffcc00}input {width: 296px; border: none; text-decoration: none;}button:hover {background-color: #12c1c1; border: none; text-decoration: none;} input.renInput{width: 75px} .addKey {width: 60px;} .main_heading {font-family: Arial, Helvetica, sans-serif; color: #32e1e1; font-size: 30px;}h5 {font-family: Arial, Helvetica, sans-serif; color: #32e1e1;}label{font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #32e1e1;}a {font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #32e1e1;}textarea {background-color: #303030; font-size: 11px; width: 394px; height: 75px; resize: vertical; color: #32e1e1;}body {background-color: #303030; text-align: center;}</style>
       <script>
       window.saveConf = function(){
         var wifi_ssid = document.getElementById("wifi_ssid").value;
@@ -457,7 +460,6 @@ def resync_config_content():
         var mqtt_pass = document.getElementById("mqtt_pass").value;
         var mqtt_sta_top = document.getElementById("mqtt_sta_top").value;
         var mqtt_cmd_top = document.getElementById("mqtt_cmd_top").value;
-        
         window.location.href = "/config/";
       }
       </script>
@@ -521,6 +523,24 @@ def unlock(dur):
   lockRelay_pin.value(0)
   print('  Locked')
   mqtt.publish(mqtt_sta_top, 'Locked', retain=False, qos=0)
+
+def mon_mag_sr():
+  global mag_state
+  global opening_type
+  global magnetic_sensor_present
+  
+  if magnetic_sensor_present == False:
+    return
+  
+  if (int(magSensor.value()) == 0) and (mag_state == 1):
+    print(opening_type + ' sensor closed')
+    mag_state = 0
+  elif (int(magSensor.value()) == 1) and (mag_state == 0):
+    print(opening_type + ' sensor opened')
+    mag_state = 1
+  else:
+    return
+    
 
 # Async function to listen for exit button presses
 def mon_exit_but():
@@ -675,6 +695,7 @@ async def main_loop():
     mon_exit_but()
     mon_prog_but()
     mon_cmd_topic()
+    mon_mag_sr()
     await uasyncio.sleep_ms(10)
   
 if silent_mode == True:
