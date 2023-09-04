@@ -75,9 +75,6 @@ sd = SDCard(slot=2)
 # wiegand_1 = 10
 # sd = sdcard.SDCard(machine.SPI(1, sck=machine.Pin(5), mosi=machine.Pin(6), miso=machine.Pin(8)), machine.Pin(7))
 
-silent_mode = False
-stop_bell = False
-
 # Try mounting SD card and list contents. Catch error.
 try:
   uos.mount(sd, '/sd')
@@ -100,6 +97,9 @@ add_mode_intervals = 10
 ip_address = '0.0.0.0'
 opening_type = 'door'
 magnetic_sensor_present = True
+silent_mode = False
+stop_bell = False
+bell_ringing = False
 
 # Set initial pin states
 buzzer_pin.value(0)
@@ -524,6 +524,11 @@ def unlock(dur):
   print('  Locked')
   mqtt.publish(mqtt_sta_top, 'Locked', retain=False, qos=0)
 
+def mon_bell():
+  if (int(bellButton_pin.value()) == 0) and (bell_ringing == False):
+    print('bell button pushed')
+    uasyncio.create_task(ring_bell())
+    
 def mon_mag_sr():
   global mag_state
   global opening_type
@@ -603,6 +608,10 @@ async def mqtt_status():
 
 # Play doorbel tone
 async def ring_bell():
+  global bell_ringing
+  if (bell_ringing) or (silent_mode):
+    return
+  bell_ringing = True
   print ('  Ringing bell')
   mqtt.publish(mqtt_sta_top, 'Ringing bell', retain=False, qos=0)
   global stop_bell
@@ -622,6 +631,7 @@ async def ring_bell():
       loop2 +=1
     await uasyncio.sleep_ms(2000)
     loop1 +=1
+  bell_ringing = False
 
 # Enter mode to add new key
 def key_add_mode():
@@ -696,6 +706,7 @@ async def main_loop():
     mon_prog_but()
     mon_cmd_topic()
     mon_mag_sr()
+    mon_bell()
     await uasyncio.sleep_ms(10)
   
 if silent_mode == True:
