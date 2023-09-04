@@ -1,7 +1,6 @@
 from microdot_asyncio import Microdot, send_file
 from umqtt.simple import MQTTClient
 from wiegand import Wiegand
-from machine import SDCard, WDT
 from utime import sleep
 import sdcard
 import machine
@@ -9,12 +8,13 @@ import time
 import uasyncio
 from machine import Pin, PWM
 import os
+
 gc.collect()
 
 # Watchdog timeout set @ 60sec
-wdt = WDT(timeout = 60000)
+wdt = machine.WDT(timeout = 60000)
 
-_VERSION = const('20230827')
+_VERSION = const('20230904')
 
 year, month, day, hour, mins, secs, weekday, yearday = time.localtime()
 
@@ -50,7 +50,7 @@ bellButton_pin = Pin(33, Pin.IN, Pin.PULL_UP)
 magSensor = Pin(22, Pin.IN, Pin.PULL_UP)
 wiegand_0 = 25
 wiegand_1 = 26
-sd = SDCard(slot=2)
+sd = machine.SDCard(slot=2)
 
 # 2.0 Pins - Uncomment if using S2 Mini board revision
 # buzzer_pin = Pin(14, Pin.OUT)
@@ -75,15 +75,7 @@ sd = SDCard(slot=2)
 # wiegand_1 = 10
 # sd = sdcard.SDCard(machine.SPI(1, sck=machine.Pin(5), mosi=machine.Pin(6), miso=machine.Pin(8)), machine.Pin(7))
 
-# Try mounting SD card and list contents. Catch error.
-try:
-  uos.mount(sd, '/sd')
-  print('SD card mounted')
-  print('  ' + str(os.listdir('/sd')))
-except:
-  print ('No SD card present')
-
-# Durations for each unlock type (eg: unlock for 10 seconds if unclocked via MQTT)
+# Tunable parameters
 exitBut_dur = 5000
 http_dur = 10000
 key_dur = 5000
@@ -91,23 +83,37 @@ mqtt_dur = 10000
 addKey_dur = 15000
 add_hold_time = 2000
 sd_boot_hold_time = 3000
-add_mode = False
-add_mode_counter = 0
-add_mode_intervals = 10
-ip_address = '0.0.0.0'
-opening_type = 'door'
 magnetic_sensor_present = True
 silent_mode = False
+add_mode_intervals = 10
+opening_type = 'door'
+
+# Global parameters
+add_mode_counter = 0
+ip_address = '0.0.0.0'
 stop_bell = False
 bell_ringing = False
+add_mode = False
+sd_present = False
 
 # Set initial pin states
 buzzer_pin.value(0)
 lockRelay_pin.value(0)
 mag_state = 0
 
+# Define dictionaries to store configuration and authorized keys
 CONFIG_DICT = {}
 KEYS_DICT = {}
+
+# Try mounting SD card and list contents. Catch error.
+try:
+  uos.mount(sd, '/sd')
+  print('SD card mounted')
+  print('  ' + str(os.listdir('/sd')))
+  sd_present = True
+except:
+  print ('No SD card present')
+  sd_present = False
 
 # Function for copying files
 def copy(s, t):
@@ -158,6 +164,10 @@ load_esp_keys()
 # Load config file from SD card
 def load_sd_config():
   global CONFIG_DICT
+  global sd_present
+  if (sd_present == False):
+    print ('SD Card not present')
+    return
   try:
     with open('sd/dl32.cfg') as json_file:
       wipe_config()
@@ -169,6 +179,10 @@ def load_sd_config():
 # Load keys file from SD card
 def load_sd_keys():
   global KEYS_DICT
+  global sd_present
+  if (sd_present == False):
+    print ('SD Card not present')
+    return
   try:
     with open('sd/keys.cfg') as json_file:
       wipe_keys()
@@ -218,6 +232,10 @@ def refresh_time():
 
 # Save key dictionary to SD card
 def save_keys_to_sd():
+  global sd_present
+  if (sd_present == False):
+    print ('SD Card not present')
+    return
   if file_exists('sd/keys.cfg'):
       #rename old file
       refresh_time()
@@ -227,6 +245,10 @@ def save_keys_to_sd():
 
 # Save configuration dictionary to SD card
 def save_config_to_sd():
+  global sd_present
+  if (sd_present == False):
+    print ('SD Card not present')
+    return
   if file_exists('sd/dl32.cfg'):
       #rename old file
       refresh_time()
@@ -264,6 +286,10 @@ def start_server():
 
 # Import keys from SD card into keys dictionary and overwrite keys.cfg on ESP32
 def import_keys_from_sd():
+  global sd_present
+  if (sd_present == False):
+    print ('SD Card not present')
+    return
   if file_exists('sd/keys.cfg'):
     load_sd_keys()
     if file_exists('keys.cfg'):
@@ -351,6 +377,7 @@ def on_key(key_number, facility_code, keys_read):
       print ('  Facility code: ' + str(facility_code))
       mqtt.publish(mqtt_sta_top, 'Unauthorized key ' + str(key_number) + ' scanned', retain=False, qos=0)
       invalidBeep()
+      
     else:
       add_key(key_number)
       add_mode = False
@@ -524,7 +551,7 @@ def unlock(dur):
   print('  Locked')
   mqtt.publish(mqtt_sta_top, 'Locked', retain=False, qos=0)
 
-def mon_bell():
+def mon_bell_butt():
   if (int(bellButton_pin.value()) == 0) and (bell_ringing == False):
     print('bell button pushed')
     uasyncio.create_task(ring_bell())
@@ -546,9 +573,8 @@ def mon_mag_sr():
   else:
     return
     
-
 # Async function to listen for exit button presses
-def mon_exit_but():
+def mon_exit_butt():
   global add_hold_time
   global add_mode
   global stop_bell
@@ -568,9 +594,10 @@ def mon_exit_but():
       unlock(exitBut_dur)
 
 # Async function to listen for proramming button presses
-def mon_prog_but():
+def mon_prog_butt():
   global add_hold_time
   global stop_bell
+  global sd_present
   if int(progButton_pin.value()) == 0:
     stop_bell = True
     time_held = 0
@@ -578,6 +605,9 @@ def mon_prog_but():
       time.sleep_ms(10)
       time_held += 10
     if time_held > add_hold_time:
+      if (sd_present == False):
+        print ('SD Card not present')
+        return
       print('copying SD to ESP')
       prog_sd_beeps()
       try:
@@ -598,13 +628,6 @@ async def mqtt_ping():
   while True:
     mqtt.ping()
     await uasyncio.sleep(60)
-
-# Send hearbeat MQTT message every 30min
-async def mqtt_status():
-  while True:
-    print('Published status message to ' + mqtt_sta_top.decode('utf-8'))
-    mqtt.publish(mqtt_sta_top, 'Still alive!', retain=False, qos=0)
-    await uasyncio.sleep(1800)
 
 # Play doorbel tone
 async def ring_bell():
@@ -667,11 +690,19 @@ def invalidBeep():
   if silent_mode == True:
     return
   buzzer_pin.value(1)
-  time.sleep_ms(500)
+  time.sleep_ms(750)
   buzzer_pin.value(0)
   time.sleep_ms(100)
   buzzer_pin.value(1)
-  time.sleep_ms(500)
+  time.sleep_ms(750)
+  buzzer_pin.value(0)
+  time.sleep_ms(100)
+  buzzer_pin.value(1)
+  time.sleep_ms(750)
+  buzzer_pin.value(0)
+  time.sleep_ms(100)
+  buzzer_pin.value(1)
+  time.sleep_ms(750)
   buzzer_pin.value(0)
 
 # "Bip"
@@ -702,11 +733,11 @@ def prog_sd_beeps():
 async def main_loop():
   while True:
     wdt.feed()
-    mon_exit_but()
-    mon_prog_but()
+    mon_exit_butt()
+    mon_prog_butt()
+    mon_bell_butt()
     mon_cmd_topic()
     mon_mag_sr()
-    mon_bell()
     await uasyncio.sleep_ms(10)
   
 if silent_mode == True:
@@ -735,8 +766,6 @@ web_server = Microdot()
 
 uasyncio.create_task(main_loop())
 uasyncio.create_task(mqtt_ping())
-
-# uasyncio.create_task(mqtt_status())
 
 @web_server.route('/')
 def hello(request):
