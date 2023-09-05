@@ -6,7 +6,6 @@ import sdcard
 import machine
 import time
 import uasyncio
-from machine import Pin, PWM
 import os
 
 gc.collect()
@@ -41,36 +40,36 @@ print('Current Date/Time: ' + '{}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}'.format(yea
 # sd = SDCard(slot=2)
 
 # 1.1 Pins w/TinyPico adapter - Uncomment if using board revision 1.1 with tinypico adapter
-buzzer_pin = Pin(14, Pin.OUT)
-neopin_pin = Pin(21, Pin.OUT)
-lockRelay_pin = Pin(27, Pin.OUT)
-progButton_pin = Pin(4, Pin.IN, Pin.PULL_UP)
-exitButton_pin = Pin(32, Pin.IN, Pin.PULL_UP)
-bellButton_pin = Pin(33, Pin.IN, Pin.PULL_UP)
-magSensor = Pin(22, Pin.IN, Pin.PULL_UP)
+buzzer_pin = machine.Pin(14, machine.Pin.OUT)
+neopin_pin = machine.Pin(21, machine.Pin.OUT)
+lockRelay_pin = machine.Pin(27, machine.Pin.OUT)
+progButton_pin = machine.Pin(4, machine.Pin.IN, machine.Pin.PULL_UP)
+exitButton_pin = machine.Pin(32, machine.Pin.IN, machine.Pin.PULL_UP)
+bellButton_pin = machine.Pin(33, machine.Pin.IN, machine.Pin.PULL_UP)
+magSensor = machine.Pin(22, machine.Pin.IN, machine.Pin.PULL_UP)
 wiegand_0 = 25
 wiegand_1 = 26
 sd = machine.SDCard(slot=2)
 
 # 2.0 Pins - Uncomment if using S2 Mini board revision
-# buzzer_pin = Pin(14, Pin.OUT)
-# neopin_pin = Pin(38, Pin.OUT)
-# lockRelay_pin = Pin(10, Pin.OUT)
-# progButton_pin = Pin(12, Pin.IN, Pin.PULL_UP)
-# exitButton_pin = Pin(13, Pin.IN, Pin.PULL_UP)
-# bellButton_pin = Pin(33, Pin.IN, Pin.PULL_UP)
-# magSensor = Pin(11, Pin.IN, Pin.PULL_UP)
+# buzzer_pin = machine.Pin(14, Pin.OUT)
+# neopin_pin = machine.Pin(38, Pin.OUT)
+# lockRelay_pin = machine.Pin(10, Pin.OUT)
+# progButton_pin = machine.Pin(12, Pin.IN, Pin.PULL_UP)
+# exitButton_pin = machine.Pin(13, Pin.IN, Pin.PULL_UP)
+# bellButton_pin = machine.Pin(33, Pin.IN, Pin.PULL_UP)
+# magSensor = machine.Pin(11, Pin.IN, Pin.PULL_UP)
 # wiegand_0 = 16
 # wiegand_1 = 17
 
 # 3.0 Pins - Uncomment if using S3 Wemos board revision
-# buzzer_pin = Pin(16, Pin.OUT)
-# neopin_pin = Pin(13, Pin.OUT)
-# lockRelay_pin = Pin(2, Pin.OUT)
-# progButton_pin = Pin(8, Pin.IN, Pin.PULL_UP)
-# exitButton_pin = Pin(9, Pin.IN, Pin.PULL_UP)
-# bellButton_pin = Pin(11, Pin.IN, Pin.PULL_UP)
-# magSensor = Pin(15, Pin.IN, Pin.PULL_UP)
+# buzzer_pin = machine.Pin(16, Pin.OUT)
+# neopin_pin = machine.Pin(13, Pin.OUT)
+# lockRelay_pin = machine.Pin(2, Pin.OUT)
+# progButton_pin = machine.Pin(8, Pin.IN, Pin.PULL_UP)
+# exitButton_pin = machine.Pin(9, Pin.IN, Pin.PULL_UP)
+# bellButton_pin = machine.Pin(11, Pin.IN, Pin.PULL_UP)
+# magSensor = machine.Pin(15, Pin.IN, Pin.PULL_UP)
 # wiegand_0 = 12
 # wiegand_1 = 10
 # sd = sdcard.SDCard(machine.SPI(1, sck=machine.Pin(5), mosi=machine.Pin(6), miso=machine.Pin(8)), machine.Pin(7))
@@ -407,7 +406,7 @@ def resync_html_content():
   main_html = """<!DOCTYPE html>
   <html>
     <head>
-      <style>div {width: 400px; margin: 20px auto; text-align: center; border: 3px solid #32e1e1; background-color: #555555; left: auto; right: auto;}.header {font-family: Arial, Helvetica, sans-serif; font-size: 20px; color: #32e1e1;}button {width: 395px; background-color: #32e1e1; border: none; text-decoration: none; }button.rem {background-color: #C12200; width: 40px;}button.rem:hover {background-color: red}button.ren {background-color: #ff9900; width: 40px;}button.ren:hover {background-color: #ffcc00}input {width: 296px; border: none; text-decoration: none;}button:hover {background-color: #12c1c1; border: none; text-decoration: none;} input.renInput{width: 75px} .addKey {width: 60px;} .main_heading {font-family: Arial, Helvetica, sans-serif; color: #32e1e1; font-size: 30px;}h5 {font-family: Arial, Helvetica, sans-serif; color: #32e1e1;}label{font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #32e1e1;}a {font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #32e1e1;}textarea {background-color: #303030; font-size: 11px; width: 394px; height: 75px; resize: vertical; color: #32e1e1;}body {background-color: #303030; text-align: center;}</style>
+      <style>div {width: 400px; margin: 20px auto; text-align: center; border: 3px solid #32e1e1; background-color: #555555; left: auto; right: auto;}.header {font-family: Arial, Helvetica, sans-serif; font-size: 20px; color: #32e1e1;}button {width: 395px; background-color: #32e1e1; border: none; text-decoration: none; }button.rem {background-color: #C12200; width: 40px;}button.rem:hover {background-color: red}button.ren {background-color: #ff9900; width: 40px;}button.ren:hover {background-color: #ffcc00}input {width: 296px; border: none; text-decoration: none;}button:hover {background-color: #12c1c1; border: none; text-decoration: none;} input.renInput{width: 75px} .addKey {width: 193px;} .main_heading {font-family: Arial, Helvetica, sans-serif; color: #32e1e1; font-size: 30px;}h5 {font-family: Arial, Helvetica, sans-serif; color: #32e1e1;}label{font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #32e1e1;}a {font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #32e1e1;}textarea {background-color: #303030; font-size: 11px; width: 394px; height: 75px; resize: vertical; color: #32e1e1;}body {background-color: #303030; text-align: center;}</style>
       <script>
       window.addKey = function(){
         var input = document.getElementById("addKeyInput").value;
@@ -452,6 +451,7 @@ def resync_html_content():
         <input id="addKeyInput" value="" class="addKey">
         <button onClick="addKey()" class="addKey">Add</button>
         <br/>
+        <a href='/add_mode'><button>scan-to-add</button></a><br/>
         <hr>
         <a class='header'>keys.cfg JSON</a><br/>
         <textarea readonly style="height: 50px">""" + str(KEYS_DICT) + """</textarea><br/><br/>
@@ -502,13 +502,13 @@ def resync_config_content():
         <form action="" method="GET">
           <table style="width: 300px; text-align: left; border: 0px solid black; border-collapse: collapse; margin-left: auto; margin-right: auto;">
             <tr> <td> <a>Wifi SSID:</a> </td> <td> <input id="wifi_ssid" name="wifi_ssid" class="config_input" value=""" + str(wifi_ssid) + """> </td> </tr>
-            <tr> <td> <a>Wifi password:</a> </td> <td> <input id="wifi_pass" name="wifi_pass" class="config_input" value=""" + str(wifi_pass) + """> </td> </tr>
+            <tr> <td> <a>Wifi password:</a> </td> <td> <input type="password" id="wifi_pass" name="wifi_pass" class="config_input" value=""" + str(wifi_pass) + """> </td> </tr>
             <tr> <td> <a>WebUI port:</a> </td> <td> <input id="web_port" name="web_port" class="config_input" value=""" + str(web_port) + """> </td> </tr>
             <tr> <td> <a>MQTT broker:</a> </td> <td> <input id="mqtt_brok" name="mqtt_brok" class="config_input" value=""" + str(mqtt_brok) + """> </td> </tr>
             <tr> <td> <a>MQTT port:</a> </td> <td> <input id="mqtt_port" name="mqtt_port" class="config_input" value=""" + str(mqtt_port) + """> </td> </tr>
             <tr> <td> <a>MQTT id:</a> </td> <td> <input id="mqtt_clid" name="mqtt_clid" class="config_input" value=""" + str(mqtt_clid) + """> </td> </tr>
             <tr> <td> <a>MQTT user:</a> </td> <td> <input id="mqtt_user" name="mqtt_user" class="config_input" value=""" + CONFIG_DICT['mqtt_user'] + """> </td> </tr>
-            <tr> <td> <a>MQTT password:</a> </td> <td> <input id="mqtt_pass" name="mqtt_pass" class="config_input" value=""" + CONFIG_DICT['mqtt_pass'] + """> </td> </tr>
+            <tr> <td> <a>MQTT password:</a> </td> <td> <input type="password" id="mqtt_pass" name="mqtt_pass" class="config_input" value=""" + CONFIG_DICT['mqtt_pass'] + """> </td> </tr>
             <tr> <td> <a>MQTT status topic:</a> </td> <td> <input id="mqtt_sta_top" name="mqtt_sta_top" class="config_input" value=""" + CONFIG_DICT['mqtt_sta_top'] + """> </td> </tr>
             <tr> <td> <a>MQTT command topic:</a> </td> <td> <input id="mqtt_cmd_top" name="mqtt_cmd_top" class="config_input" value=""" + CONFIG_DICT['mqtt_cmd_top'] + """> </td> </tr>
           </table>
@@ -578,6 +578,7 @@ def mon_exit_butt():
   global add_hold_time
   global add_mode
   global stop_bell
+  
   if int(exitButton_pin.value()) == 0:
     stop_bell = True
     time_held = 0
@@ -585,9 +586,7 @@ def mon_exit_butt():
       time.sleep_ms(10)
       time_held += 10
     if time_held > add_hold_time:
-      print('Key add mode')
       uasyncio.create_task(key_add_mode())
-      add_mode == True
     elif add_mode == False:
       print('Exit button pressed')
       mqtt.publish(mqtt_sta_top, 'Exit button pressed', retain=False, qos=0)
@@ -623,7 +622,7 @@ def mon_prog_butt():
 def mon_cmd_topic():
   mqtt.check_msg()
 
-# Async function to send PinReq messages to MQTT broker
+# Async function to send PingReq messages to MQTT broker
 async def mqtt_ping():
   while True:
     mqtt.ping()
@@ -661,6 +660,8 @@ def key_add_mode():
   global add_mode
   global add_mode_intervals
   global add_mode_counter
+  add_mode = True
+  print('Key add mode')
   add_mode_counter = 0
   print('Waiting for new key',end=' ')
   add_mode = True
@@ -669,9 +670,9 @@ def key_add_mode():
     lil_bip()
     await uasyncio.sleep_ms(int(addKey_dur/add_mode_intervals))
     add_mode_counter += 1
-  if key_add_mode == True:
+  if add_mode == True:
     print('No key detected.')
-    key_add_mode == False
+    add_mode = False
 
 # "Beep-Beep"
 def unlockBeep():
@@ -710,7 +711,7 @@ def lil_bip():
   if silent_mode == True:
     return
   buzzer_pin.value(1)
-  time.sleep_ms(10)
+  time.sleep_ms(1)
   buzzer_pin.value(0)
 
 def prog_sd_beeps():
@@ -738,7 +739,7 @@ async def main_loop():
     mon_bell_butt()
     mon_cmd_topic()
     mon_mag_sr()
-    await uasyncio.sleep_ms(10)
+    await uasyncio.sleep_ms(50)
   
 if silent_mode == True:
   print('Silent Mode Activated')
@@ -807,6 +808,12 @@ def print_keys_http(request):
 def purge_keys_http(request):
   print('Purge keys command recieved from WebUI')
   purge_keys()
+  return main_html, 200, {'Content-Type': 'text/html'}
+
+@web_server.route('/add_mode')
+def web_add_mode(request):
+  print('Add-key-mode command recieved from WebUI')
+  uasyncio.create_task(key_add_mode())
   return main_html, 200, {'Content-Type': 'text/html'}
 
 @web_server.route('/add_key/<string:key>', methods=['GET', 'POST'])
