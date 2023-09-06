@@ -1,19 +1,14 @@
 from microdot_asyncio import Microdot, send_file
 from umqtt.simple import MQTTClient
 from wiegand import Wiegand
-from utime import sleep
-import sdcard
-import machine
-import time
-import uasyncio
-import os
+import sdcard, machine, neopixel, time, uasyncio, os
 
 gc.collect()
 
 # Watchdog timeout set @ 60sec
 wdt = machine.WDT(timeout = 60000)
 
-_VERSION = const('20230904')
+_VERSION = const('20230906')
 
 year, month, day, hour, mins, secs, weekday, yearday = time.localtime()
 
@@ -28,20 +23,20 @@ print('Current Date/Time: ' + '{}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}'.format(yea
 # DAT0 D0 MISO 19
 
 # 1.1 Pins - Uncomment if using board revision 1.1
-# buzzer_pin = Pin(14, Pin.OUT)
-# neopin_pin = Pin(21, Pin.OUT)
-# lockRelay_pin = Pin(27, Pin.OUT)
-# progButton_pin = Pin(12, Pin.IN, Pin.PULL_UP)
-# exitButton_pin = Pin(32, Pin.IN, Pin.PULL_UP)
-# bellButton_pin = Pin(33, Pin.IN, Pin.PULL_UP)
-# magSensor = Pin(22, Pin.IN, Pin.PULL_UP)
+# buzzer_pin = machine.Pin(14, machine.Pin.OUT)
+# neopix_pin = machine.Pin(21, machine.Pin.OUT)
+# lockRelay_pin = machine.Pin(27, machine.Pin.OUT)
+# progButton_pin = machine.Pin(12, machine.Pin.IN, machine.Pin.PULL_UP)
+# exitButton_pin = machine.Pin(32, machine.Pin.IN, machine.Pin.PULL_UP)
+# bellButton_pin = machine.Pin(33, machine.Pin.IN, machine.Pin.PULL_UP)
+# magSensor = machine.Pin(22, machine.Pin.IN, machine.Pin.PULL_UP)
 # wiegand_0 = 25
 # wiegand_1 = 26
-# sd = SDCard(slot=2)
+# sd = machine.SDCard(slot=2)
 
 # 1.1 Pins w/TinyPico adapter - Uncomment if using board revision 1.1 with tinypico adapter
 buzzer_pin = machine.Pin(14, machine.Pin.OUT)
-neopin_pin = machine.Pin(21, machine.Pin.OUT)
+neopix_pin = machine.Pin(21, machine.Pin.OUT)
 lockRelay_pin = machine.Pin(27, machine.Pin.OUT)
 progButton_pin = machine.Pin(4, machine.Pin.IN, machine.Pin.PULL_UP)
 exitButton_pin = machine.Pin(32, machine.Pin.IN, machine.Pin.PULL_UP)
@@ -53,7 +48,7 @@ sd = machine.SDCard(slot=2)
 
 # 2.0 Pins - Uncomment if using S2 Mini board revision
 # buzzer_pin = machine.Pin(14, Pin.OUT)
-# neopin_pin = machine.Pin(38, Pin.OUT)
+# neopix_pin = machine.Pin(38, Pin.OUT)
 # lockRelay_pin = machine.Pin(10, Pin.OUT)
 # progButton_pin = machine.Pin(12, Pin.IN, Pin.PULL_UP)
 # exitButton_pin = machine.Pin(13, Pin.IN, Pin.PULL_UP)
@@ -64,7 +59,7 @@ sd = machine.SDCard(slot=2)
 
 # 3.0 Pins - Uncomment if using S3 Wemos board revision
 # buzzer_pin = machine.Pin(16, Pin.OUT)
-# neopin_pin = machine.Pin(13, Pin.OUT)
+# neopix_pin = machine.Pin(47, Pin.OUT)
 # lockRelay_pin = machine.Pin(2, Pin.OUT)
 # progButton_pin = machine.Pin(8, Pin.IN, Pin.PULL_UP)
 # exitButton_pin = machine.Pin(9, Pin.IN, Pin.PULL_UP)
@@ -73,6 +68,11 @@ sd = machine.SDCard(slot=2)
 # wiegand_0 = 12
 # wiegand_1 = 10
 # sd = sdcard.SDCard(machine.SPI(1, sck=machine.Pin(5), mosi=machine.Pin(6), miso=machine.Pin(8)), machine.Pin(7))
+
+
+np = neopixel.NeoPixel(neopix_pin, 1)
+np[0] = (0, 255, 255)
+np.write()
 
 # Tunable parameters
 exitBut_dur = 5000
@@ -204,11 +204,11 @@ key_NUMS = KEYS_DICT.keys()
 
 # Check if a file exists
 def file_exists(filename):
-    try:
-        os.stat(filename)
-        return True
-    except OSError:
-        return False
+  try:
+    os.stat(filename)
+    return True
+  except OSError:
+    return False
 
 # Connect to wifi using details from config file
 def connect_wifi():
@@ -249,27 +249,27 @@ def save_config_to_sd():
     print ('SD Card not present')
     return
   if file_exists('sd/dl32.cfg'):
-      #rename old file
-      refresh_time()
-      os.rename('sd/dl32.cfg', ('sd/dl32' + str('{}{:02d}{:02d}_{:02d}{:02d}{:02d}'.format(year, month, day, hour, mins, secs) + '.cfg')))
+    #rename old file
+    refresh_time()
+    os.rename('sd/dl32.cfg', ('sd/dl32' + str('{}{:02d}{:02d}_{:02d}{:02d}{:02d}'.format(year, month, day, hour, mins, secs) + '.cfg')))
   with open('sd/dl32.cfg', 'w') as json_file:
     json.dump(CONFIG_DICT, json_file)
 
 # Save key dictionary to ESP32
 def save_keys_to_esp():
   if file_exists('keys.cfg'):
-      #rename old file
-      refresh_time()
-      os.rename('keys.cfg', ('keys' + str('{}{:02d}{:02d}_{:02d}{:02d}{:02d}'.format(year, month, day, hour, mins, secs) + '.cfg')))
+    #rename old file
+    refresh_time()
+    os.rename('keys.cfg', ('keys' + str('{}{:02d}{:02d}_{:02d}{:02d}{:02d}'.format(year, month, day, hour, mins, secs) + '.cfg')))
   with open('keys.cfg', 'w') as json_file:
     json.dump(KEYS_DICT, json_file)
 
 # Save configuration dictionary to ESP32
 def save_config_to_esp():
   if file_exists('dl32.cfg'):
-      #rename old file
-      refresh_time()
-      os.rename('dl32.cfg', ('dl32' + str('{}{:02d}{:02d}_{:02d}{:02d}{:02d}'.format(year, month, day, hour, mins, secs) + '.cfg')))
+    #rename old file
+    refresh_time()
+    os.rename('dl32.cfg', ('dl32' + str('{}{:02d}{:02d}_{:02d}{:02d}{:02d}'.format(year, month, day, hour, mins, secs) + '.cfg')))
   with open('dl32.cfg', 'w') as json_file:
     json.dump(CONFIG_DICT, json_file)
 
@@ -371,11 +371,15 @@ def on_key(key_number, facility_code, keys_read):
       add_mode_counter = add_mode_intervals
   else:
     if add_mode == False:
+      np[0] = (0, 255, 0)
+      np.write()
       print ('  Unauthorized key: ')
       print ('  key #: ' + str(key_number))
       print ('  Facility code: ' + str(facility_code))
       mqtt.publish(mqtt_sta_top, 'Unauthorized key ' + str(key_number) + ' scanned', retain=False, qos=0)
       invalidBeep()
+      np[0] = (0, 255, 255)
+      np.write()
       
     else:
       add_key(key_number)
@@ -442,22 +446,17 @@ def resync_html_content():
         <a href='/download/main.py'><button>Download main.py</button></a><br/>
         <a href='/download/boot.py'><button>Download boot.py</button></a><br/>
         <a href='/download/dl32.cfg'><button>Download dl32.cfg</button></a><br/>
-        <a href='/download/keys.cfg'><button>Download keys.cfg</button></a><br/><br/><br/>
-        <a href='/config'><button>Configure</button></a>
-        <hr> <a class='header'>Rename/Delete Keys</a><br/><a style="color:#ffcc00; font-size: 15px; font-weight: bold;">***This cannot be undone!***</a>
-        <br/>""" + rem_buttons + """
-        <hr>
+        <a href='/download/keys.cfg'><button>Download keys.cfg</button></a><br/><br/>        
         <a class='header'>Add Key</a> <br/>
         <input id="addKeyInput" value="" class="addKey">
         <button onClick="addKey()" class="addKey">Add</button>
         <br/>
         <a href='/add_mode'><button>scan-to-add</button></a><br/>
+        <br/><br/>
+        <a href='/config'><button>Configure</button></a><br/>
+        <hr> <a class='header'>Rename/Delete Keys</a><br/><a style="color:#ffcc00; font-size: 15px; font-weight: bold;">***This cannot be undone!***</a>
+        <br/>""" + rem_buttons + """
         <hr>
-        <a class='header'>keys.cfg JSON</a><br/>
-        <textarea readonly style="height: 50px">""" + str(KEYS_DICT) + """</textarea><br/><br/>
-        <a class='header'>dl32.cfg JSON</a><br/>
-        <textarea readonly style="height: 100px">""" + str(CONFIG_DICT) + """</textarea>
-        <br/>
         <a>Version """ + _VERSION + """ IP Address """ + str(ip_address) + """</a><br/>
         <br/>
       </div>
@@ -542,12 +541,16 @@ def purge_keys():
 
 # Unlock for duration specified as argument
 def unlock(dur):
+  np[0] = (255, 0, 0)
+  np.write()
   lockRelay_pin.value(1)
   unlockBeep()
   print('  Unlocked')
   mqtt.publish(mqtt_sta_top, 'Unlocked', retain=False, qos=0)
   time.sleep_ms(dur)
   lockRelay_pin.value(0)
+  np[0] = (0, 255, 255)
+  np.write()
   print('  Locked')
   mqtt.publish(mqtt_sta_top, 'Locked', retain=False, qos=0)
 
@@ -634,6 +637,8 @@ async def ring_bell():
   if (bell_ringing) or (silent_mode):
     return
   bell_ringing = True
+  np[0] = (100, 255, 0)
+  np.write()
   print ('  Ringing bell')
   mqtt.publish(mqtt_sta_top, 'Ringing bell', retain=False, qos=0)
   global stop_bell
@@ -653,6 +658,8 @@ async def ring_bell():
       loop2 +=1
     await uasyncio.sleep_ms(2000)
     loop1 +=1
+  np[0] = (0, 255, 255)
+  np.write()
   bell_ringing = False
 
 # Enter mode to add new key
@@ -661,6 +668,8 @@ def key_add_mode():
   global add_mode_intervals
   global add_mode_counter
   add_mode = True
+  np[0] = (150, 255, 130) # White
+  np.write()
   print('Key add mode')
   add_mode_counter = 0
   print('Waiting for new key',end=' ')
@@ -673,6 +682,8 @@ def key_add_mode():
   if add_mode == True:
     print('No key detected.')
     add_mode = False
+  np[0] = (0, 255, 255)
+  np.write()
 
 # "Beep-Beep"
 def unlockBeep():
