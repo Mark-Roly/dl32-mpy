@@ -1,14 +1,15 @@
 from microdot_asyncio import Microdot, send_file
 from umqtt.simple import MQTTClient
 from wiegand import Wiegand
+from buzzer_music import music
 import sdcard, machine, neopixel, time, uasyncio, os
 
 gc.collect()
 
-# Watchdog timeout set @ 60sec
-wdt = machine.WDT(timeout = 60000)
+# Watchdog timeout set @ 5min
+wdt = machine.WDT(timeout = 300000)
 
-_VERSION = const('20230906')
+_VERSION = const('20230916')
 
 year, month, day, hour, mins, secs, weekday, yearday = time.localtime()
 
@@ -23,16 +24,16 @@ print('Current Date/Time: ' + '{}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}'.format(yea
 # DAT0 D0 MISO 19
 
 # 1.1 Pins - Uncomment if using board revision 1.1
-# buzzer_pin = machine.Pin(14, machine.Pin.OUT)
-# neopix_pin = machine.Pin(21, machine.Pin.OUT)
-# lockRelay_pin = machine.Pin(27, machine.Pin.OUT)
-# progButton_pin = machine.Pin(12, machine.Pin.IN, machine.Pin.PULL_UP)
-# exitButton_pin = machine.Pin(32, machine.Pin.IN, machine.Pin.PULL_UP)
-# bellButton_pin = machine.Pin(33, machine.Pin.IN, machine.Pin.PULL_UP)
-# magSensor = machine.Pin(22, machine.Pin.IN, machine.Pin.PULL_UP)
+# buzzer_pin = Pin(14, Pin.OUT)
+# neopix_pin = Pin(21, Pin.OUT)
+# lockRelay_pin = Pin(27, Pin.OUT)
+# progButton_pin = Pin(12, Pin.IN, Pin.PULL_UP)
+# exitButton_pin = Pin(32, Pin.IN, Pin.PULL_UP)
+# bellButton_pin = Pin(33, Pin.IN, Pin.PULL_UP)
+# magSensor = Pin(22, Pin.IN, Pin.PULL_UP)
 # wiegand_0 = 25
 # wiegand_1 = 26
-# sd = machine.SDCard(slot=2)
+# sd = SDCard(slot=2)
 
 # 1.1 Pins w/TinyPico adapter - Uncomment if using board revision 1.1 with tinypico adapter
 buzzer_pin = machine.Pin(14, machine.Pin.OUT)
@@ -45,6 +46,10 @@ magSensor = machine.Pin(22, machine.Pin.IN, machine.Pin.PULL_UP)
 wiegand_0 = 25
 wiegand_1 = 26
 sd = machine.SDCard(slot=2)
+
+np = neopixel.NeoPixel(neopix_pin, 1)	
+np[0] = (0, 255, 255)	
+np.write()
 
 # 2.0 Pins - Uncomment if using S2 Mini board revision
 # buzzer_pin = machine.Pin(14, Pin.OUT)
@@ -59,7 +64,7 @@ sd = machine.SDCard(slot=2)
 
 # 3.0 Pins - Uncomment if using S3 Wemos board revision
 # buzzer_pin = machine.Pin(16, Pin.OUT)
-# neopix_pin = machine.Pin(47, Pin.OUT)
+# neopix_pin = machine.Pin(13, Pin.OUT)
 # lockRelay_pin = machine.Pin(2, Pin.OUT)
 # progButton_pin = machine.Pin(8, Pin.IN, Pin.PULL_UP)
 # exitButton_pin = machine.Pin(9, Pin.IN, Pin.PULL_UP)
@@ -69,10 +74,8 @@ sd = machine.SDCard(slot=2)
 # wiegand_1 = 10
 # sd = sdcard.SDCard(machine.SPI(1, sck=machine.Pin(5), mosi=machine.Pin(6), miso=machine.Pin(8)), machine.Pin(7))
 
+mountain_king = '0 A4 1 14;1 B4 1 14;2 C5 1 14;3 D5 1 14;4 E5 1 14;5 C5 1 14;6 E5 2 14;8 D#5 1 14;9 B4 1 14;10 D#5 2 14;12 D5 1 14;13 A#4 1 14;14 D5 2 14;16 A4 1 14;17 B4 1 14;18 C5 1 14;19 D5 1 14;20 E5 1 14;21 C5 1 14;22 E5 1 14;23 A5 1 14;24 G5 1 14;25 E5 1 14;26 C5 1 14;27 E5 1 14;28 G5 4 14'
 
-np = neopixel.NeoPixel(neopix_pin, 1)
-np[0] = (0, 255, 255)
-np.write()
 
 # Tunable parameters
 exitBut_dur = 5000
@@ -236,9 +239,9 @@ def save_keys_to_sd():
     print ('SD Card not present')
     return
   if file_exists('sd/keys.cfg'):
-      #rename old file
-      refresh_time()
-      os.rename('sd/keys.cfg', ('sd/keys' + str('{}{:02d}{:02d}_{:02d}{:02d}{:02d}'.format(year, month, day, hour, mins, secs) + '.cfg')))
+    #rename old file
+    refresh_time()
+    os.rename('sd/keys.cfg', ('sd/keys' + str('{}{:02d}{:02d}_{:02d}{:02d}{:02d}'.format(year, month, day, hour, mins, secs) + '.cfg')))
   with open('sd/keys.cfg', 'w') as json_file:
     json.dump(KEYS_DICT, json_file)
 
@@ -371,16 +374,15 @@ def on_key(key_number, facility_code, keys_read):
       add_mode_counter = add_mode_intervals
   else:
     if add_mode == False:
-      np[0] = (0, 255, 0)
+      np[0] = (0, 255, 0)	
       np.write()
       print ('  Unauthorized key: ')
       print ('  key #: ' + str(key_number))
       print ('  Facility code: ' + str(facility_code))
       mqtt.publish(mqtt_sta_top, 'Unauthorized key ' + str(key_number) + ' scanned', retain=False, qos=0)
       invalidBeep()
-      np[0] = (0, 255, 255)
+      np[0] = (0, 255, 255)	
       np.write()
-      
     else:
       add_key(key_number)
       add_mode = False
@@ -541,7 +543,7 @@ def purge_keys():
 
 # Unlock for duration specified as argument
 def unlock(dur):
-  np[0] = (255, 0, 0)
+  np[0] = (255, 0, 0)	
   np.write()
   lockRelay_pin.value(1)
   unlockBeep()
@@ -549,7 +551,7 @@ def unlock(dur):
   mqtt.publish(mqtt_sta_top, 'Unlocked', retain=False, qos=0)
   time.sleep_ms(dur)
   lockRelay_pin.value(0)
-  np[0] = (0, 255, 255)
+  np[0] = (0, 255, 255)	
   np.write()
   print('  Locked')
   mqtt.publish(mqtt_sta_top, 'Locked', retain=False, qos=0)
@@ -558,7 +560,7 @@ def mon_bell_butt():
   if (int(bellButton_pin.value()) == 0) and (bell_ringing == False):
     print('bell button pushed')
     uasyncio.create_task(ring_bell())
-    
+
 def mon_mag_sr():
   global mag_state
   global opening_type
@@ -569,9 +571,11 @@ def mon_mag_sr():
   
   if (int(magSensor.value()) == 0) and (mag_state == 1):
     print(opening_type + ' sensor closed')
+    mqtt.publish(mqtt_sta_top, opening_type + ' sensor closed', retain=False, qos=0)
     mag_state = 0
   elif (int(magSensor.value()) == 1) and (mag_state == 0):
     print(opening_type + ' sensor opened')
+    mqtt.publish(mqtt_sta_top, opening_type + ' sensor opened', retain=False, qos=0)
     mag_state = 1
   else:
     return
@@ -623,7 +627,10 @@ def mon_prog_butt():
 
 # Async function to listed for MQTT commands
 def mon_cmd_topic():
-  mqtt.check_msg()
+  try:
+    mqtt.check_msg()
+  except:
+    print('error checking MQTT topic')
 
 # Async function to send PingReq messages to MQTT broker
 async def mqtt_ping():
@@ -634,33 +641,40 @@ async def mqtt_ping():
 # Play doorbel tone
 async def ring_bell():
   global bell_ringing
+  global stop_bell
   if (bell_ringing) or (silent_mode):
     return
+  stop_bell = False
   bell_ringing = True
-  np[0] = (100, 255, 0)
+  np[0] = (100, 255, 0)	
   np.write()
   print ('  Ringing bell')
   mqtt.publish(mqtt_sta_top, 'Ringing bell', retain=False, qos=0)
-  global stop_bell
-  stop_bell = False
-  loop1 = 0
-  while loop1 <= 3:
-    loop2 = 0
-    while loop2 <= 30:
-      if stop_bell == True:
-          return
-      if silent_mode == True:
-          return
-      buzzer_pin.value(1)
-      await uasyncio.sleep_ms(10)
-      buzzer_pin.value(0)
-      await uasyncio.sleep_ms(10)
-      loop2 +=1
-    await uasyncio.sleep_ms(2000)
-    loop1 +=1
+  doorbell = music(mountain_king, pins=[buzzer_pin])
+  while doorbell.tick():
+    await uasyncio.sleep_ms(50)
+
+# Old generic/static tone
+#   loop1 = 0
+#   while loop1 <= 3:
+#     loop2 = 0
+#     while loop2 <= 30:
+#       if stop_bell == True:
+#           return
+#       if silent_mode == True:
+#           return
+#       buzzer_pin.value(1)
+#       await uasyncio.sleep_ms(10)
+#       buzzer_pin.value(0)
+#       await uasyncio.sleep_ms(10)
+#       loop2 +=1
+#     await uasyncio.sleep_ms(2000)
+#     loop1 +=1
+    
   np[0] = (0, 255, 255)
   np.write()
   bell_ringing = False
+  print ('  Bell finished')
 
 # Enter mode to add new key
 def key_add_mode():
@@ -668,7 +682,7 @@ def key_add_mode():
   global add_mode_intervals
   global add_mode_counter
   add_mode = True
-  np[0] = (150, 255, 130) # White
+  np[0] = (150, 255, 130) # White	
   np.write()
   print('Key add mode')
   add_mode_counter = 0
@@ -682,7 +696,7 @@ def key_add_mode():
   if add_mode == True:
     print('No key detected.')
     add_mode = False
-  np[0] = (0, 255, 255)
+  np[0] = (0, 255, 255)	
   np.write()
 
 # "Beep-Beep"
