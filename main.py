@@ -3,13 +3,14 @@ from umqtt.simple import MQTTClient
 from wiegand import Wiegand
 from buzzer_music import music
 import sdcard, machine, neopixel, time, uasyncio, os
+from doorbells import Doorbells
 
 gc.collect()
 
 # Watchdog timeout set @ 5min
 wdt = machine.WDT(timeout = 300000)
 
-_VERSION = const('20230917')
+_VERSION = const('20231009')
 
 year, month, day, hour, mins, secs, weekday, yearday = time.localtime()
 
@@ -74,14 +75,6 @@ np.write()
 # wiegand_1 = 10
 # sd = sdcard.SDCard(machine.SPI(1, sck=machine.Pin(5), mosi=machine.Pin(6), miso=machine.Pin(8)), machine.Pin(7))
 
-mountain_king = '0 A4 1 14;1 B4 1 14;2 C5 1 14;3 D5 1 14;4 E5 1 14;5 C5 1 14;6 E5 2 14;8 D#5 1 14;9 B4 1 14;10 D#5 2 14;12 D5 1 14;13 A#4 1 14;14 D5 2 14;16 A4 1 14;17 B4 1 14;18 C5 1 14;19 D5 1 14;20 E5 1 14;21 C5 1 14;22 E5 1 14;23 A5 1 14;24 G5 1 14;25 E5 1 14;26 C5 1 14;27 E5 1 14;28 G5 4 14'
-t2 = '0 G3 1 3;1 A3 1 3;2 A#3 1 3;3 A#3 1 3;4 A#3 1 3;5 A#3 1 3;6 A#3 1 3;7 A#3 1 3;8 A#3 1 3;9 A#3 1 3;17 A#3 1 3;16 A#3 1 3;15 A#3 1 3;14 A#3 1 3;13 A#3 1 3;12 A#3 1 3;11 A#3 1 3;10 A#3 1 3;18 A3 1 3;19 A3 1 3;20 A3 1 3;22 F3 1 3;23 F3 1 3;25 A#2 1 3;26 A#2 1 3;27 A#2 1 3;28 A#2 1 3;21 A3 1 3;29 A#2 1 3;30 A#2 1 3;31 A#2 1 3;32 A#2 1 3;33 A#2 1 3;34 A#2 1 3;41 A#2 1 3;40 A#2 1 3;39 A#2 1 3;38 A#2 1 3;37 A#2 1 3;36 A#2 1 3;35 A#2 1 3;7 A#3 1 3;65 A#3 1 3;64 A#3 1 3;63 A#3 1 3;62 A#3 1 3;60 A#3 1 3;61 A#3 1 3;59 A#3 1 3;58 A#3 1 3;57 A#3 1 3;56 A#3 1 3;54 A#3 1 3;53 A#3 1 3;52 A#3 1 3;51 A#3 1 3;50 A#3 1 3;49 A3 1 3;48 G3 1 3;24 A#2 1 3;66 A3 1 3;67 A3 1 3;68 A3 1 3;69 A3 1 3;70 F3 1 3;71 F3 1 3;42 A#2 1 3;43 A#2 1 3;44 A#2 1 3;45 A#2 1 3;46 A#2 1 3;47 A#2 1 3;72 D4 1 3;73 D4 1 3;74 D4 1 3;75 D4 1 3;83 D4 1 3;82 D4 1 3;81 D4 1 3;80 D4 1 3;79 D4 1 3;78 D4 1 3;77 D4 1 3;76 D4 1 3;84 C4 1 3;85 C4 1 3;86 C4 1 3;87 C4 1 3;88 C4 1 3;90 C4 1 3;89 C4 1 3;91 C4 1 3;92 C4 1 3;93 C4 1 3;94 C4 1 3;95 C4 1 3;119 F3 1 3;118 F3 1 3;117 A3 1 3;116 A3 1 3;115 A3 1 3;114 A3 1 3;113 A#3 1 3;112 A#3 1 3;111 A#3 1 3;110 A#3 1 3;109 A#3 1 3;108 A#3 1 3;107 A#3 1 3;106 A#3 1 3;105 A#3 1 3;104 A#3 1 3;103 A#3 1 3;102 A#3 1 3;101 A#3 1 3;100 A#3 1 3;99 A#3 1 3;98 A#3 1 3;97 A3 1 3;96 G3 1 3;120 C3 1 3;121 C3 1 3;122 C3 1 3;123 C3 1 3;124 C3 1 3;125 C3 1 3;126 C3 1 3;127 C3 1 3;128 C3 1 3;129 C3 1 3;130 C3 1 3;131 C3 1 3;134 C3 1 3;133 C3 1 3;132 C3 1 3;135 C3 1 3;136 C3 1 3;137 C3 1 3;138 C3 1 3;139 C3 1 3;140 C3 1 3;141 C3 1 3;142 C3 1 3;143 C3 1 3;144 A#2 1 3;145 A#2 1 3;146 A#2 1 3;147 A#2 1 3;148 A#2 1 3;149 A#2 1 3;150 A#2 1 3;151 A#2 1 3;152 A#2 1 3;153 A#2 1 3;154 A#2 1 3;155 A#2 1 3;161 A#2 1 3;160 A#2 1 3;159 A#2 1 3;158 A#2 1 3;157 A#2 1 3;156 A#2 1 3;55 A#3 1 3;168 A#2 1 3;169 A#2 1 3;170 A#2 1 3;171 A#2 1 3;172 A#2 1 3;173 A#2 1 3;174 A#2 1 3;175 A#2 1 3;176 A#2 1 3;177 A#2 1 3;178 A#2 1 3;179 A#2 1 3;180 A2 1 3;181 A2 1 3;182 A2 1 3;183 A2 1 3;184 A2 1 3;185 A2 1 3;186 A2 1 3;187 A2 1 3;188 A2 1 3;189 A2 1 3;190 A2 1 3;191 A2 1 3;192 G2 1 3;193 G2 1 3;194 G2 1 3;195 G2 1 3;196 G2 1 3;197 G2 1 3;198 G2 1 3;199 G2 1 3;200 G2 1 3;201 G2 1 3;202 G2 1 3;203 G2 1 3;204 G2 1 3;205 G2 1 3;206 G2 1 3;207 G2 1 3;234 G2 1 3;233 G2 1 3;232 G2 1 3;231 G2 1 3;230 G2 1 3;229 G2 1 3;228 G2 1 3;226 G2 1 3;227 G2 1 3;225 G2 1 3;224 G2 1 3;223 G2 1 3;222 G2 1 3;221 G2 1 3;220 G2 1 3;219 G2 1 3;218 G2 1 3;217 G2 1 3;216 G2 1 3;215 G2 1 3;214 G2 1 3;213 G2 1 3;212 G2 1 3;211 G2 1 3;209 G2 1 3;208 G2 1 3;210 G2 1 3;0 G3 1 3;1 A3 1 3;2 A#3 1 3;3 A#3 1 3;4 A#3 1 3;5 A#3 1 3;6 A#3 1 3;7 A#3 1 3;8 A#3 1 3;9 A#3 1 3;17 A#3 1 3;16 A#3 1 3;15 A#3 1 3;14 A#3 1 3;13 A#3 1 3;12 A#3 1 3;11 A#3 1 3;10 A#3 1 3;18 A3 1 3;19 A3 1 3;20 A3 1 3;22 F3 1 3;23 F3 1 3;25 A#2 1 3;26 A#2 1 3;27 A#2 1 3;28 A#2 1 3;21 A3 1 3;29 A#2 1 3;30 A#2 1 3;31 A#2 1 3;32 A#2 1 3;33 A#2 1 3;34 A#2 1 3;41 A#2 1 3;40 A#2 1 3;39 A#2 1 3;38 A#2 1 3;37 A#2 1 3;36 A#2 1 3;35 A#2 1 3;7 A#3 1 3;65 A#3 1 3;64 A#3 1 3;63 A#3 1 3;62 A#3 1 3;60 A#3 1 3;61 A#3 1 3;59 A#3 1 3;58 A#3 1 3;57 A#3 1 3;56 A#3 1 3;54 A#3 1 3;53 A#3 1 3;52 A#3 1 3;51 A#3 1 3;50 A#3 1 3;49 A3 1 3;48 G3 1 3;24 A#2 1 3;66 A3 1 3;67 A3 1 3;68 A3 1 3;69 A3 1 3;70 F3 1 3;71 F3 1 3;42 A#2 1 3;43 A#2 1 3;44 A#2 1 3;45 A#2 1 3;46 A#2 1 3;47 A#2 1 3;72 D4 1 3;73 D4 1 3;74 D4 1 3;75 D4 1 3;83 D4 1 3;82 D4 1 3;81 D4 1 3;80 D4 1 3;79 D4 1 3;78 D4 1 3;77 D4 1 3;76 D4 1 3;84 C4 1 3;85 C4 1 3;86 C4 1 3;87 C4 1 3;88 C4 1 3;90 C4 1 3;89 C4 1 3;91 C4 1 3;92 C4 1 3;93 C4 1 3;94 C4 1 3;95 C4 1 3;119 F3 1 3;118 F3 1 3;117 A3 1 3;116 A3 1 3;115 A3 1 3;114 A3 1 3;113 A#3 1 3;112 A#3 1 3;111 A#3 1 3;110 A#3 1 3;109 A#3 1 3;108 A#3 1 3;107 A#3 1 3;106 A#3 1 3;105 A#3 1 3;104 A#3 1 3;103 A#3 1 3;102 A#3 1 3;101 A#3 1 3;100 A#3 1 3;99 A#3 1 3;98 A#3 1 3;97 A3 1 3;96 G3 1 3;120 C3 1 3;121 C3 1 3;122 C3 1 3;123 C3 1 3;124 C3 1 3;125 C3 1 3;126 C3 1 3;127 C3 1 3;128 C3 1 3;129 C3 1 3;130 C3 1 3;131 C3 1 3;134 C3 1 3;133 C3 1 3;132 C3 1 3;135 C3 1 3;136 C3 1 3;137 C3 1 3;138 C3 1 3;139 C3 1 3;140 C3 1 3;141 C3 1 3;142 C3 1 3;143 C3 1 3;144 A#2 1 3;145 A#2 1 3;146 A#2 1 3;147 A#2 1 3;148 A#2 1 3;149 A#2 1 3;150 A#2 1 3;151 A#2 1 3;152 A#2 1 3;153 A#2 1 3;154 A#2 1 3;155 A#2 1 3;161 A#2 1 3;160 A#2 1 3;159 A#2 1 3;158 A#2 1 3;157 A#2 1 3;156 A#2 1 3;55 A#3 1 3;168 A#2 1 3;169 A#2 1 3;170 A#2 1 3;171 A#2 1 3;172 A#2 1 3;173 A#2 1 3;174 A#2 1 3;175 A#2 1 3;176 A#2 1 3;177 A#2 1 3;178 A#2 1 3;179 A#2 1 3;180 A2 1 3;181 A2 1 3;182 A2 1 3;183 A2 1 3;184 A2 1 3;185 A2 1 3;186 A2 1 3;187 A2 1 3;188 A2 1 3;189 A2 1 3;190 A2 1 3;191 A2 1 3;192 G2 1 3;193 G2 1 3;194 G2 1 3;195 G2 1 3;196 G2 1 3;197 G2 1 3;198 G2 1 3;199 G2 1 3;200 G2 1 3;201 G2 1 3;202 G2 1 3;203 G2 1 3;204 G2 1 3;205 G2 1 3;206 G2 1 3;207 G2 1 3;234 G2 1 3;233 G2 1 3;232 G2 1 3;231 G2 1 3;230 G2 1 3;229 G2 1 3;228 G2 1 3;226 G2 1 3;227 G2 1 3;225 G2 1 3;224 G2 1 3;223 G2 1 3;222 G2 1 3;221 G2 1 3;220 G2 1 3;219 G2 1 3;218 G2 1 3;217 G2 1 3;216 G2 1 3;215 G2 1 3;214 G2 1 3;213 G2 1 3;212 G2 1 3;211 G2 1 3;209 G2 1 3;208 G2 1 3;210 G2 1 3;162 A#2 1 3;163 A#2 1 3;166 G2 1 3;167 G2 1 3;164 A#2 1 3;165 A#2 1 3'
-cell = '0 D#4 4 14;4 G#4 4 14;8 E4 4 14;12 A#4 1 14;13 D#4 2 14;15 B4 1 14;16 D#4 4 14;20 G#4 4 14;24 E4 4 14;28 A#4 1 14;29 D#4 2 14;31 B4 1 14;32 D#4 4 14;36 G#4 4 14;40 E4 4 14;44 A#4 1 14;45 D#4 2 14;47 B4 1 14;48 D#4 4 14;52 G#4 4 14;56 E4 4 14;60 A#4 1 14;61 D#4 2 14;63 B4 1 14;64 D#5 14 14;78 F#5 4 14;82 C#5 4 14;86 B4 3.75 14;90 D#5 4 14;94 A#4 4 14;98 G#4 14 14;89.75 C#5 0.25 14'
-mario = '172 C5 1 7;0 E6 1 7;2 E6 1 7;6 E6 1 7;10 C6 1 7;12 E6 1 7;16 G6 1 7;24 G5 1 7;32 C6 1 7;38 G5 1 7;44 E5 1 7;50 A5 1 7;54 B5 1 7;58 A#5 1 7;60 A5 1 7;64 G5 1 7;66 E6 1 7;69 G6 1 7;72 A6 1 7;76 F6 1 7;78 G6 1 7;82 E6 1 7;86 C6 1 7;88 D6 1 7;90 B5 1 7;96 C6 1 7;102 G5 1 7;108 E5 1 7;114 A5 1 7;118 B5 1 7;122 A#5 1 7;124 A5 1 7;128 G5 1 7;130 E6 1 7;133 G6 1 7;136 A6 1 7;140 F6 1 7;142 G6 1 7;146 E6 1 7;150 C6 1 7;152 D6 1 7;154 B5 1 7;164 G6 1 7;166 F#6 1 7;168 F6 1 7;170 D#6 1 7;174 E6 1 7;178 G#5 1 7;180 A5 1 7;182 C6 1 7;186 A5 1 7;188 C6 1 7;190 D6 1 7;196 G6 1 7;198 F#6 1 7;200 F6 1 7;202 D#6 1 7;206 E6 1 7;210 C7 1 7;214 C7 1 7;216 C7 1 7;228 G6 1 7;230 F#6 1 7;232 F6 1 7;234 D#6 1 7;238 E6 1 7;242 G#5 1 7;244 A5 1 7;246 C6 1 7;250 A5 1 7;252 C6 1 7;254 D6 1 7;260 D#6 1 7;266 D6 1 7;272 C6 1 7;176 F4 1 7;184 C5 1 7;192 C4 1 7;204 G4 1 7;220 G4 1 7;224 C4 1 7;236 C5 1 7;240 F4 1 7;248 C5 1 7;256 C4 1 7;160 C4 1 7'
-xmen = '0 G4 1 44 2;1 C5 1 44 2;2 D5 1 44 2;3 D#5 1 44 2;4 D5 4 44 2;8 C5 2 44 2;10 G4 5 44 2;16 G4 1 44 2;17 C5 1 44 2;18 D5 1 44 2;19 D#5 1 44 2;20 D5 4 44 2;24 C5 2 44 2;26 G#4 5 44 2;32 G4 1 44 2;33 C5 1 44 2;34 D5 1 44 2;35 D#5 1 44 2;36 D5 4 44 2;40 C5 2 44 2;42 D#5 8 44 2;52 D5 2 44 2;54 C5 4 44 2;64 C5 1 44 2;65 F5 1 44 2;66 G5 1 44 2;67 G#5 1 44 2;68 G5 1 44 2;72 F5 2 44 2;74 C5 5 44 2;80 C5 1 44 2;81 F5 1 44 2;82 G5 1 44 2;83 G#5 1 44 2;84 G5 4 44 2;88 F5 2 44 2;90 C#5 5 44 2;96 G4 1 44 2;97 C5 1 44 2;98 D5 1 44 2;99 D#5 1 44 2;100 D5 4 44 2;104 C5 2 44 2;106 D#5 10 44 2;118 C5 4 44 2;132 G#5 1 44 2;137.3300018310547 G5 1 44 2;138.6699981689453 F5 1 44 2;142.6699981689453 F5 1 44 2;146.6699981689453 A#5 1 44 2;148 A#5 1 44 2;149.3300018310547 G#5 1 44 2;150.6699981689453 G5 1 44 2;152 A#5 1 44 2;153.3300018310547 G#5 1 44 2;154.6699981689453 G5 1 44 2;156 A#5 1 44 2;157.3300018310547 G#5 1 44 2;158.6699981689453 G5 1 44 2;160 G#5 1 44 2;170.6699981689453 G#5 1 44 2;173.3300018310547 A#5 1 44 2;174.6699981689453 G#5 1 44 2;176 A#5 1 44 2;177.3300018310547 C6 1 44 2;178.6699981689453 G#6 1 44 2;180 G6 12 44 2;192 G5 1 44 2;194 D6 1 44 2;212 C7 2 44 2;116 D5 2 44 2;208 G6 4 44 2;202 D#6 4 44 2;200 C6 2 44 2;196 D6 4 44 2;193 C6 1 44 2;195 D#6 1 44 2;168 C6 1 44 2;169 A#5 1 44 2;172 C6 1 44 2;140 G#5 1 44 2;136 G#5 1 44 2;133.3300018310547 G5 1 44 2;145.3300018310547 G#5 1 44 2;144 G5 1 44 2;141.3300018310547 G5 1 44 2;134.6699981689453 F5 1.3300018310546875 44 2;161.3300018310547 A#5 1 44 2;166.6699981689453 G#5 1 44 2;164 C6 1 44 2;165 A#5 1 44 2;166.6699981689453 G#5 1 44 2;162.6699981689453 C6 1 44 2;162.6699981689453 C6 1 44 2'
-hp = '0 B4 4 47;4 E5 6 47;10 G5 2 47;12 F#5 4 47;16 E5 8 47;24 B5 4 47;28 A5 12 47;40 F#5 12 47;52 E5 6 47;58 G5 2 47;60 F#5 4 47;64 D#5 8 47;72 F5 4 47;76 B4 18 47;96 B4 4 47;100 E5 6 47;106 G5 2 47;108 F#5 4 47;112 E5 8 47;120 B5 4 47;124 D6 8 47;132 C#6 4 47;136 C6 8 47;144 G#5 4 47;154 B5 2 47;156 A#5 4 47;168 G5 4 47;172 E5 20 47;192 G5 4 47;196 B5 8 47;204 G5 4 47;216 G5 4 47;208 B5 8 47;220 C6 8 47;228 B5 4 47;232 A#5 8 47;240 F#5 4 47;244 G5 6 47;250 B5 2 47;252 A#5 4 47;268 B5 20 47;288 G5 4 47;292 B5 8 47;300 G5 4 47;312 G5 4 47;304 B5 8 47;316 D6 8 47;324 C#6 4 47;328 C6 8 47;336 G#5 4 47;340 C6 6 47;346 B5 2 47;348 A#5 4 47;352 A#4 8 47;360 G5 4 47;364 E5 24 47;256 A#4 8 47;264 B4 4 47;148 C6 6 47;160 A#4 8 47'
-current = hp
-
 # Tunable parameters
 exitBut_dur = 5000
 http_dur = 10000
@@ -98,7 +91,6 @@ opening_type = 'door'
 # Global parameters
 add_mode_counter = 0
 ip_address = '0.0.0.0'
-stop_bell = False
 bell_ringing = False
 add_mode = False
 sd_present = False
@@ -208,7 +200,13 @@ mqtt_pass = (CONFIG_DICT['mqtt_pass']).encode('utf_8')
 mqtt_cmd_top = (CONFIG_DICT['mqtt_cmd_top']).encode('utf_8')
 mqtt_sta_top = (CONFIG_DICT['mqtt_sta_top']).encode('utf_8')
 web_port = (CONFIG_DICT['web_port'])
+current = Doorbells[CONFIG_DICT['doorbell']]
 key_NUMS = KEYS_DICT.keys()
+
+#Initialize doorbell object
+#current = Doorbells['hp']
+doorbell = music(current['music'], pins=[buzzer_pin])
+doorbell.stop()
 
 # Check if a file exists
 def file_exists(filename):
@@ -246,7 +244,7 @@ def save_keys_to_sd():
   if file_exists('sd/keys.cfg'):
     #rename old file
     refresh_time()
-    os.rename('sd/keys.cfg', ('sd/keys' + str('{}{:02d}{:02d}_{:02d}{:02d}{:02d}'.format(year, month, day, hour, mins, secs) + '.cfg')))
+    os.rename('sd/keys.cfg', ('sd/keys_' + str('{}{:02d}{:02d}_{:02d}{:02d}{:02d}'.format(year, month, day, hour, mins, secs) + '.cfg')))
   with open('sd/keys.cfg', 'w') as json_file:
     json.dump(KEYS_DICT, json_file)
 
@@ -259,8 +257,10 @@ def save_config_to_sd():
   if file_exists('sd/dl32.cfg'):
     #rename old file
     refresh_time()
-    os.rename('sd/dl32.cfg', ('sd/dl32' + str('{}{:02d}{:02d}_{:02d}{:02d}{:02d}'.format(year, month, day, hour, mins, secs) + '.cfg')))
+    print('renaming sd/dl32.cfg to sd/dl32' + str('{}{:02d}{:02d}_{:02d}{:02d}{:02d}'.format(year, month, day, hour, mins, secs) + '.cfg'))
+    os.rename('sd/dl32.cfg', ('sd/dl32_' + str('{}{:02d}{:02d}_{:02d}{:02d}{:02d}'.format(year, month, day, hour, mins, secs) + '.cfg')))
   with open('sd/dl32.cfg', 'w') as json_file:
+    print('Saving updated config to sd/dl32.cfg')
     json.dump(CONFIG_DICT, json_file)
 
 # Save key dictionary to ESP32
@@ -268,7 +268,7 @@ def save_keys_to_esp():
   if file_exists('keys.cfg'):
     #rename old file
     refresh_time()
-    os.rename('keys.cfg', ('keys' + str('{}{:02d}{:02d}_{:02d}{:02d}{:02d}'.format(year, month, day, hour, mins, secs) + '.cfg')))
+    os.rename('keys.cfg', ('keys_' + str('{}{:02d}{:02d}_{:02d}{:02d}{:02d}'.format(year, month, day, hour, mins, secs) + '.cfg')))
   with open('keys.cfg', 'w') as json_file:
     json.dump(KEYS_DICT, json_file)
 
@@ -277,14 +277,17 @@ def save_config_to_esp():
   if file_exists('dl32.cfg'):
     #rename old file
     refresh_time()
-    os.rename('dl32.cfg', ('dl32' + str('{}{:02d}{:02d}_{:02d}{:02d}{:02d}'.format(year, month, day, hour, mins, secs) + '.cfg')))
+    os.rename('dl32.cfg', ('dl32_' + str('{}{:02d}{:02d}_{:02d}{:02d}{:02d}'.format(year, month, day, hour, mins, secs) + '.cfg')))
   with open('dl32.cfg', 'w') as json_file:
     json.dump(CONFIG_DICT, json_file)
 
 # Start Microdot Async web server
 def start_server():
   print('Starting web server on port ' + str(web_port))
-  mqtt.publish(mqtt_sta_top, ('Starting web server on port ' + str(web_port)), retain=False, qos=0)
+  try:
+    mqtt.publish(mqtt_sta_top, ('Starting web server on port ' + str(web_port)), retain=False, qos=0)
+  except:
+    print('error publishing to MQTT topic')
   try:
     web_server.run(port = web_port)
   except:
@@ -328,7 +331,10 @@ def add_key(key_number):
     with open('keys.cfg', 'w') as json_file:
       json.dump(KEYS_DICT, json_file)
     print('  Key ' + str(key_number) + ' added to authorized list as: ' + date_time)
-    mqtt.publish(mqtt_sta_top, 'Key ' + str(key_number) + ' added to authorized list as ' + date_time, retain=False, qos=0)
+    try:
+      mqtt.publish(mqtt_sta_top, 'Key ' + str(key_number) + ' added to authorized list as ' + date_time, retain=False, qos=0)
+    except:
+      print('error publishing to MQTT topic')
     resync_html_content()
   else:
     print('  Unable to add key ' + key_number)
@@ -342,7 +348,10 @@ def rem_key(key_number):
     with open('keys.cfg', 'w') as json_file:
       json.dump(KEYS_DICT, json_file)
     print('  Key '+ str(key_number) +' removed!')
-    mqtt.publish(mqtt_sta_top, 'Key ' + str(key_number) + ' removed from authorized list', retain=False, qos=0)
+    try:
+      mqtt.publish(mqtt_sta_top, 'Key ' + str(key_number) + ' removed from authorized list', retain=False, qos=0)
+    except:
+      print('error publishing to MQTT topic')
     resync_html_content()
   else:
     print('  Unable to remove key ' + key_number)
@@ -355,7 +364,10 @@ def ren_key(key, name):
     with open('keys.cfg', 'w') as json_file:
       json.dump(KEYS_DICT, json_file)
     print('  Key '+ str(key) +' renamed!')
-    mqtt.publish(mqtt_sta_top, 'Key ' + str(key) + ' renamed to ' + name, retain=False, qos=0)
+    try:
+      mqtt.publish(mqtt_sta_top, 'Key ' + str(key) + ' renamed to ' + name, retain=False, qos=0)
+    except:
+      print('error publishing to MQTT topic')
     resync_html_content()
   else:
     print('  Unable to rename key ' + key)
@@ -371,7 +383,10 @@ def on_key(key_number, facility_code, keys_read):
       print ('  Authorized key: ')
       print ('  key #: ' + str(key_number))
       print ('  key belongs to ' + KEYS_DICT[str(key_number)])
-      mqtt.publish(mqtt_sta_top, 'Authorized key ' + str(key_number) + ' (' + KEYS_DICT[str(key_number)] + ') scanned', retain=False, qos=0)
+      try:
+        mqtt.publish(mqtt_sta_top, 'Authorized key ' + str(key_number) + ' (' + KEYS_DICT[str(key_number)] + ') scanned', retain=False, qos=0)
+      except:
+        print('error publishing to MQTT topic')
       unlock(key_dur)
     else:
       add_mode = False
@@ -384,7 +399,10 @@ def on_key(key_number, facility_code, keys_read):
       print ('  Unauthorized key: ')
       print ('  key #: ' + str(key_number))
       print ('  Facility code: ' + str(facility_code))
-      mqtt.publish(mqtt_sta_top, 'Unauthorized key ' + str(key_number) + ' scanned', retain=False, qos=0)
+      try:
+        mqtt.publish(mqtt_sta_top, 'Unauthorized key ' + str(key_number) + ' scanned', retain=False, qos=0)
+      except:
+        print('error publishing to MQTT topic')
       invalidBeep()
       np[0] = (0, 255, 255)	
       np.write()
@@ -460,7 +478,9 @@ def resync_html_content():
         <br/>
         <a href='/add_mode'><button>scan-to-add</button></a><br/>
         <br/><br/>
-        <a href='/config'><button>Configure</button></a><br/>
+        <a href='/config_network'><button>Configure Network</button></a><br/>
+        <a href='/config_mqtt'><button>Configure MQTT</button></a><br/>
+        <a href='/config_doorbell'><button>Configure Doorbell Tones</button></a><br/>
         <hr> <a class='header'>Rename/Delete Keys</a><br/><a style="color:#ffcc00; font-size: 15px; font-weight: bold;">***This cannot be undone!***</a>
         <br/>""" + rem_buttons + """
         <hr>
@@ -473,11 +493,11 @@ def resync_html_content():
 resync_html_content()
 
 # Resync contents of static HTML webpage to take into account changes
-def resync_config_content():
-  global config_html
+def resync_config_network_content():
+  global config_network_html
   global ip_address
   
-  config_html = """<!DOCTYPE html>
+  config_network_html = """<!DOCTYPE html>
   <html>
     <head>
       <style>div {width: 400px; margin: 20px auto; text-align: center; border: 3px solid #32e1e1; background-color: #555555; left: auto; right: auto;}.header {font-family: Arial, Helvetica, sans-serif; font-size: 20px; color: #32e1e1;} .backNav {width: 50px; float: left;} .saveConf{width: 150px; } .config_input{width: 150px;} button {width: 395px; background-color: #32e1e1; border: none; text-decoration: none; }button.rem {background-color: #C12200; width: 40px;}button.rem:hover {background-color: red}button.ren {background-color: #ff9900; width: 40px;}button.ren:hover {background-color: #ffcc00}input {width: 296px; border: none; text-decoration: none;}button:hover {background-color: #12c1c1; border: none; text-decoration: none;} input.renInput{width: 75px} .addKey {width: 60px;} .main_heading {font-family: Arial, Helvetica, sans-serif; color: #32e1e1; font-size: 30px;}h5 {font-family: Arial, Helvetica, sans-serif; color: #32e1e1;}label{font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #32e1e1;}a {font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #32e1e1;}textarea {background-color: #303030; font-size: 11px; width: 394px; height: 75px; resize: vertical; color: #32e1e1;}body {background-color: #303030; text-align: center;}</style>
@@ -486,6 +506,46 @@ def resync_config_content():
         var wifi_ssid = document.getElementById("wifi_ssid").value;
         var wifi_pass = document.getElementById("wifi_pass").value;
         var web_port = document.getElementById("web_port").value;
+        window.location.href = "/config/";
+      }
+      </script>
+    </head>
+    <body>
+      <div>
+        <a href="/"><button class="backNav">Back</button></a><br/>
+        <a class='main_heading'>DL32 MENU</a></br/>
+        <a style="font-size: 15px">--- MicroPython Edition ---</a><br/>
+        <a>by Mark Booth - </a><a href='https://github.com/Mark-Roly/DL32_mpy'>github.com/Mark-Roly/DL32_mpy</a><br/><br/>
+        <a class='header'>Network Configuration</a>
+        <br/> <br/>
+        <form action="" method="GET">
+          <table style="width: 300px; text-align: left; border: 0px solid black; border-collapse: collapse; margin-left: auto; margin-right: auto;">
+            <tr> <td> <a>Wifi SSID:</a> </td> <td> <input id="wifi_ssid" name="wifi_ssid" class="config_input" value=""" + str(wifi_ssid) + """> </td> </tr>
+            <tr> <td> <a>Wifi password:</a> </td> <td> <input type="password" id="wifi_pass" name="wifi_pass" class="config_input" value=""" + str(wifi_pass) + """> </td> </tr>
+            <tr> <td> <a>WebUI port:</a> </td> <td> <input id="web_port" name="web_port" class="config_input" value=""" + str(web_port) + """> </td> </tr>
+          </table>
+        <br/>
+        <button class="saveConf" type="submit">Save</button><br/>
+        <br/>
+        <a>Version """ + _VERSION + """ IP Address """ + str(ip_address) + """</a><br/>
+        <br/>
+      </div>
+    </body>
+  </html>"""
+  
+resync_config_network_content()
+
+# Resync contents of static HTML webpage to take into account changes
+def resync_config_mqtt_content():
+  global config_mqtt_html
+  global ip_address
+  
+  config_mqtt_html = """<!DOCTYPE html>
+  <html>
+    <head>
+      <style>div {width: 400px; margin: 20px auto; text-align: center; border: 3px solid #32e1e1; background-color: #555555; left: auto; right: auto;}.header {font-family: Arial, Helvetica, sans-serif; font-size: 20px; color: #32e1e1;} .backNav {width: 50px; float: left;} .saveConf{width: 150px; } .config_input{width: 150px;} button {width: 395px; background-color: #32e1e1; border: none; text-decoration: none; }button.rem {background-color: #C12200; width: 40px;}button.rem:hover {background-color: red}button.ren {background-color: #ff9900; width: 40px;}button.ren:hover {background-color: #ffcc00}input {width: 296px; border: none; text-decoration: none;}button:hover {background-color: #12c1c1; border: none; text-decoration: none;} input.renInput{width: 75px} .addKey {width: 60px;} .main_heading {font-family: Arial, Helvetica, sans-serif; color: #32e1e1; font-size: 30px;}h5 {font-family: Arial, Helvetica, sans-serif; color: #32e1e1;}label{font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #32e1e1;}a {font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #32e1e1;}textarea {background-color: #303030; font-size: 11px; width: 394px; height: 75px; resize: vertical; color: #32e1e1;}body {background-color: #303030; text-align: center;}</style>
+      <script>
+      window.saveConf = function(){
         var mqtt_brok = document.getElementById("mqtt_brok").value;
         var mqtt_port = document.getElementById("mqtt_port").value;
         var mqtt_clid = document.getElementById("mqtt_clid").value;
@@ -503,13 +563,10 @@ def resync_config_content():
         <a class='main_heading'>DL32 MENU</a></br/>
         <a style="font-size: 15px">--- MicroPython Edition ---</a><br/>
         <a>by Mark Booth - </a><a href='https://github.com/Mark-Roly/DL32_mpy'>github.com/Mark-Roly/DL32_mpy</a><br/><br/>
-        <a class='header'>Configuration</a>
+        <a class='header'>MQTT Configuration</a>
         <br/> <br/>
         <form action="" method="GET">
           <table style="width: 300px; text-align: left; border: 0px solid black; border-collapse: collapse; margin-left: auto; margin-right: auto;">
-            <tr> <td> <a>Wifi SSID:</a> </td> <td> <input id="wifi_ssid" name="wifi_ssid" class="config_input" value=""" + str(wifi_ssid) + """> </td> </tr>
-            <tr> <td> <a>Wifi password:</a> </td> <td> <input type="password" id="wifi_pass" name="wifi_pass" class="config_input" value=""" + str(wifi_pass) + """> </td> </tr>
-            <tr> <td> <a>WebUI port:</a> </td> <td> <input id="web_port" name="web_port" class="config_input" value=""" + str(web_port) + """> </td> </tr>
             <tr> <td> <a>MQTT broker:</a> </td> <td> <input id="mqtt_brok" name="mqtt_brok" class="config_input" value=""" + str(mqtt_brok) + """> </td> </tr>
             <tr> <td> <a>MQTT port:</a> </td> <td> <input id="mqtt_port" name="mqtt_port" class="config_input" value=""" + str(mqtt_port) + """> </td> </tr>
             <tr> <td> <a>MQTT id:</a> </td> <td> <input id="mqtt_clid" name="mqtt_clid" class="config_input" value=""" + str(mqtt_clid) + """> </td> </tr>
@@ -527,7 +584,63 @@ def resync_config_content():
     </body>
   </html>"""
   
-resync_config_content()
+resync_config_mqtt_content()
+
+# Resync contents of static HTML webpage to take into account changes
+def resync_config_doorbell_content():
+  global config_doorbell_html
+  global Doorbells
+  global ip_address
+  global current
+  
+  doorbell_options = ""
+  
+  for key in Doorbells:
+    if (current["title"] == Doorbells[key]["title"]):
+      doorbell_options += '<option value=' + key + ' selected>' + Doorbells[key]["title"] + '</option>'
+    else:
+      doorbell_options += '<option value=' + key + '>' + Doorbells[key]["title"] + '</option>'
+      
+  config_doorbell_html = """<!DOCTYPE html>
+  <html>
+    <head>
+      <style>div {width: 400px; margin: 20px auto; text-align: center; border: 3px solid #32e1e1; background-color: #555555; left: auto; right: auto;}.header {font-family: Arial, Helvetica, sans-serif; font-size: 20px; color: #32e1e1;} .backNav {width: 50px; float: left;} .saveConf{width: 150px; } .config_input{width: 150px;} button {width: 395px; background-color: #32e1e1; border: none; text-decoration: none; }button.rem {background-color: #C12200; width: 40px;}button.rem:hover {background-color: red}button.ren {background-color: #ff9900; width: 40px;}button.ren:hover {background-color: #ffcc00}input {width: 296px; border: none; text-decoration: none;}button:hover {background-color: #12c1c1; border: none; text-decoration: none;} input.renInput{width: 75px} .addKey {width: 60px;} .main_heading {font-family: Arial, Helvetica, sans-serif; color: #32e1e1; font-size: 30px;}h5 {font-family: Arial, Helvetica, sans-serif; color: #32e1e1;}label{font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #32e1e1;}a {font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #32e1e1;}textarea {background-color: #303030; font-size: 11px; width: 394px; height: 75px; resize: vertical; color: #32e1e1;}body {background-color: #303030; text-align: center;}</style>
+      <script>
+        window.setBell = function(){
+          var input = document.getElementById("doorbell").value;
+          window.location.href = "/set_bell/" + input;
+        }
+      </script>
+    </head>
+    <body>
+      <div>
+        <a href="/"><button class="backNav">Back</button></a><br/>
+        <a class='main_heading'>DL32 MENU</a></br/>
+        <a style="font-size: 15px">--- MicroPython Edition ---</a><br/>
+        <a>by Mark Booth - </a><a href='https://github.com/Mark-Roly/DL32_mpy'>github.com/Mark-Roly/DL32_mpy</a><br/><br/>
+        <a class='header'>Doorbell Configuration</a>
+        <br/> <br/>
+        <table style="width: 300px; text-align: left; border: 0px solid black; border-collapse: collapse; margin-left: auto; margin-right: auto;">
+          <tr> <td> <a>Bell Tune:</a> </td>
+            <td>
+              <select id="doorbell" name="doorbell" class="config_input">
+                """ + doorbell_options + """
+              </select>
+            </td>
+          </tr>
+        </table>
+        <br/>
+        <button onClick="setBell()">Save</button>
+        <br/>
+        <a href='/config_doorbell/test'><button>Test current</button></a><br/>
+        <br/>
+        <a>Version """ + _VERSION + """ IP Address """ + str(ip_address) + """</a><br/>
+        <br/>
+      </div>
+    </body>
+  </html>"""
+  
+resync_config_doorbell_content()
 
 # Print allowed keys to serial
 def print_keys():
@@ -553,34 +666,49 @@ def unlock(dur):
   lockRelay_pin.value(1)
   unlockBeep()
   print('  Unlocked')
-  mqtt.publish(mqtt_sta_top, 'Unlocked', retain=False, qos=0)
+  try:
+    mqtt.publish(mqtt_sta_top, 'Unlocked', retain=False, qos=0)
+  except:
+    print('error publishing to MQTT topic')
   time.sleep_ms(dur)
   lockRelay_pin.value(0)
   np[0] = (0, 255, 255)	
   np.write()
   print('  Locked')
-  mqtt.publish(mqtt_sta_top, 'Locked', retain=False, qos=0)
+  try:
+    mqtt.publish(mqtt_sta_top, 'Locked', retain=False, qos=0)
+  except:
+    print('error publishing to MQTT topic')
 
 def mon_bell_butt():
+  global current
   if (int(bellButton_pin.value()) == 0) and (bell_ringing == False):
     print('bell button pushed')
-    uasyncio.create_task(ring_bell())
+    uasyncio.create_task(ring_bell(current))
 
 def mon_mag_sr():
   global mag_state
   global opening_type
   global magnetic_sensor_present
+  global doorbell
   
   if magnetic_sensor_present == False:
     return
   
   if (int(magSensor.value()) == 0) and (mag_state == 1):
     print(opening_type + ' sensor closed')
-    mqtt.publish(mqtt_sta_top, opening_type + ' sensor closed', retain=False, qos=0)
+    try:
+      mqtt.publish(mqtt_sta_top, opening_type + ' sensor closed', retain=False, qos=0)
+    except:
+      print('error publishing to MQTT topic')
     mag_state = 0
   elif (int(magSensor.value()) == 1) and (mag_state == 0):
     print(opening_type + ' sensor opened')
-    mqtt.publish(mqtt_sta_top, opening_type + ' sensor opened', retain=False, qos=0)
+    doorbell.stop()
+    try:
+      mqtt.publish(mqtt_sta_top, opening_type + ' sensor opened', retain=False, qos=0)
+    except:
+      print('error publishing to MQTT topic')
     mag_state = 1
   else:
     return
@@ -589,10 +717,10 @@ def mon_mag_sr():
 def mon_exit_butt():
   global add_hold_time
   global add_mode
-  global stop_bell
+  global doorbell
   
   if int(exitButton_pin.value()) == 0:
-    stop_bell = True
+    doorbell.stop()
     buzzer_pin.value(0)
     time_held = 0
     while (int(exitButton_pin.value()) == 0 and time_held <= add_hold_time):
@@ -602,16 +730,20 @@ def mon_exit_butt():
       uasyncio.create_task(key_add_mode())
     elif add_mode == False:
       print('Exit button pressed')
-      mqtt.publish(mqtt_sta_top, 'Exit button pressed', retain=False, qos=0)
+      try:
+        mqtt.publish(mqtt_sta_top, 'Exit button pressed', retain=False, qos=0)
+      except:
+        print('error publishing to MQTT topic')
       unlock(exitBut_dur)
 
 # Async function to listen for proramming button presses
 def mon_prog_butt():
   global add_hold_time
-  global stop_bell
   global sd_present
+  global doorbell
+  
   if int(progButton_pin.value()) == 0:
-    stop_bell = True
+    doorbell.stop()
     time_held = 0
     while (int(progButton_pin.value()) == 0 and time_held <= add_hold_time):
       time.sleep_ms(10)
@@ -628,7 +760,10 @@ def mon_prog_butt():
       except:
         print('ERROR: Import from SD failed!')
     else:
-      mqtt.publish(mqtt_sta_top, 'Prog button pressed', retain=False, qos=0)
+      try:
+        mqtt.publish(mqtt_sta_top, 'Prog button pressed', retain=False, qos=0)
+      except:
+        print('error publishing to MQTT topic')
       print('prog button pressed')
 
 # Async function to listed for MQTT commands
@@ -645,38 +780,24 @@ async def mqtt_ping():
     await uasyncio.sleep(60)
 
 # Play doorbel tone
-async def ring_bell():
+async def ring_bell(tune):
   global bell_ringing
-  global stop_bell
+  global doorbell
   if (bell_ringing) or (silent_mode):
     return
-  stop_bell = False
   bell_ringing = True
   np[0] = (100, 255, 0)	
   np.write()
-  print ('  Ringing bell')
-  mqtt.publish(mqtt_sta_top, 'Ringing bell', retain=False, qos=0)
-  doorbell = music(current, pins=[buzzer_pin])
-  while (doorbell.tick() and stop_bell == False):
-    await uasyncio.sleep_ms(10)
+  print ('  Ringing bell - melody: ' + tune['title'])
+  try:
+    mqtt.publish(mqtt_sta_top, 'Ringing bell', retain=False, qos=0)
+  except:
+    print('error publishing to MQTT topic')
+  doorbell = music(tune['music'], pins=[buzzer_pin])
+  while doorbell.tick():
+    await uasyncio.sleep_ms(tune['speed'])
 
-# Old generic/static tone
-#   loop1 = 0
-#   while loop1 <= 3:
-#     loop2 = 0
-#     while loop2 <= 30:
-#       if stop_bell == True:
-#           return
-#       if silent_mode == True:
-#           return
-#       buzzer_pin.value(1)
-#       await uasyncio.sleep_ms(10)
-#       buzzer_pin.value(0)
-#       await uasyncio.sleep_ms(10)
-#       loop2 +=1
-#     await uasyncio.sleep_ms(2000)
-#     loop1 +=1
-    
+  doorbell.stop()
   np[0] = (0, 255, 255)
   np.write()
   bell_ringing = False
@@ -803,9 +924,20 @@ uasyncio.create_task(mqtt_ping())
 def hello(request):
   return main_html, 200, {'Content-Type': 'text/html'}
 
-@web_server.route('/config')
-def config(request):
-  return config_html, 200, {'Content-Type': 'text/html'}
+@web_server.route('/config_network')
+def config_network(request):
+  resync_config_network_content()
+  return config_network_html, 200, {'Content-Type': 'text/html'}
+
+@web_server.route('/config_mqtt')
+def config_mqtt(request):
+  resync_config_mqtt_content()
+  return config_mqtt_html, 200, {'Content-Type': 'text/html'}
+
+@web_server.route('/config_doorbell')
+def config_doorbell(request):
+  resync_config_doorbell_content()
+  return config_doorbell_html, 200, {'Content-Type': 'text/html'}
 
 @web_server.route('/unlock')
 def unlock_http(request):
@@ -821,8 +953,9 @@ def reset_http(request):
 
 @web_server.route('/bell')
 async def bell_http(request):
+  global current
   print('Bell command recieved from WebUI')
-  uasyncio.create_task(ring_bell())
+  uasyncio.create_task(ring_bell(current))
   return main_html, 200, {'Content-Type': 'text/html'}
 
 @web_server.route('/download/<string:filename>', methods=['GET', 'POST'])
@@ -864,5 +997,23 @@ def content(request, key, name):
   print('Rename key command recieved from WebUI  to rename ' + key + ' to ' + name)
   ren_key(key, name)
   return main_html, 200, {'Content-Type': 'text/html'}
+
+@web_server.route('/set_bell/<string:tone>', methods=['GET', 'POST'])
+def content(request, tone):
+  resync_config_doorbell_content()
+  global Doorbells
+  global current
+  print('Switching doorbell tone to ' + tone)
+  current = Doorbells[tone]
+  CONFIG_DICT['doorbell'] = tone
+  save_config_to_esp()
+  return config_doorbell_html, 200, {'Content-Type': 'text/html'}
+
+@web_server.route('/config_doorbell/test', methods=['GET', 'POST'])
+def content(request):
+  global current
+  print('Testing doorbell: ' + current["title"])
+  uasyncio.create_task(ring_bell(current))
+  return config_doorbell_html, 200, {'Content-Type': 'text/html'}
 
 start_server()
