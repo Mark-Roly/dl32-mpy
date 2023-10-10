@@ -274,10 +274,10 @@ def save_keys_to_esp():
 
 # Save configuration dictionary to ESP32
 def save_config_to_esp():
-#  if file_exists('dl32.cfg'):
-#    #rename old file
-#    refresh_time()
-#    os.rename('dl32.cfg', ('dl32_' + str('{}{:02d}{:02d}_{:02d}{:02d}{:02d}'.format(year, month, day, hour, mins, secs) + '.cfg')))
+  if file_exists('dl32.cfg'):
+    #rename old file
+    refresh_time()
+    os.rename('dl32.cfg', ('dl32_' + str('{}{:02d}{:02d}_{:02d}{:02d}{:02d}'.format(year, month, day, hour, mins, secs) + '.cfg')))
   with open('dl32.cfg', 'w') as json_file:
     json.dump(CONFIG_DICT, json_file)
 
@@ -1029,7 +1029,8 @@ def content(request, tone):
   print('Switching doorbell tone to ' + tone)
   current = Doorbells[tone]
   CONFIG_DICT['doorbell'] = tone
-  save_config_to_esp()
+  with open('dl32.cfg', 'w') as json_file:
+    json.dump(CONFIG_DICT, json_file)
   resync_config_doorbell_content()
   return config_doorbell_html, 200, {'Content-Type': 'text/html'}
 
