@@ -10,7 +10,7 @@ gc.collect()
 # Watchdog timeout set @ 5min
 wdt = machine.WDT(timeout = 300000)
 
-_VERSION = const('20231009')
+_VERSION = const('20231010')
 
 year, month, day, hour, mins, secs, weekday, yearday = time.localtime()
 
@@ -274,10 +274,10 @@ def save_keys_to_esp():
 
 # Save configuration dictionary to ESP32
 def save_config_to_esp():
-  if file_exists('dl32.cfg'):
-    #rename old file
-    refresh_time()
-    os.rename('dl32.cfg', ('dl32_' + str('{}{:02d}{:02d}_{:02d}{:02d}{:02d}'.format(year, month, day, hour, mins, secs) + '.cfg')))
+#  if file_exists('dl32.cfg'):
+#    #rename old file
+#    refresh_time()
+#    os.rename('dl32.cfg', ('dl32_' + str('{}{:02d}{:02d}_{:02d}{:02d}{:02d}'.format(year, month, day, hour, mins, secs) + '.cfg')))
   with open('dl32.cfg', 'w') as json_file:
     json.dump(CONFIG_DICT, json_file)
 
@@ -422,6 +422,9 @@ def sub_cb(topic, msg):
     else:
       print ('Command not recognized!')
 
+css = "div {width: 400px; margin: 20px auto; text-align: center; border: 3px solid #32e1e1; background-color: #555555; left: auto; right: auto;} hr {border-bottom: 1px solid #32e1e1} .header {font-family: Arial, Helvetica, sans-serif; font-size: 20px; color: #32e1e1} button {width: 395px; background-color: #32e1e1; border: none; text-decoration: none} .backNav {width: 50px; float: left;} .saveConf{width: 150px; } .config_input{width: 150px;} button.rem {background-color: #C12200; width: 30px; padding-left: 2px;} button.rem:hover {background-color: red} button.ren {background-color: #ff9900; width: 55px; padding-left: 1px} button.ren:hover {background-color: #ffcc00} input {width: 296px; border: none; text-decoration: none;} button:hover {background-color: #12c1c1; border: none; text-decoration: none;} input.renInput{width: 75px} .addKey {width: 193px;} .main_heading {font-family: Arial, Helvetica, sans-serif; color: #32e1e1; font-size: 30px;} h5 {font-family: Arial, Helvetica, sans-serif; color: #32e1e1} label {font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #32e1e1;} a {font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #32e1e1;}textarea {background-color: #303030; font-size: 11px; width: 394px; height: 75px; resize: vertical; color: #32e1e1;} body {background-color: #303030; text-align: center;} "
+
+
 # Resync contents of static HTML webpage to take into account changes
 def resync_html_content():
   global main_html
@@ -429,13 +432,15 @@ def resync_html_content():
   
   rem_buttons = '<table style="width: 380px; text-align: left; border: 0px solid black; border-collapse: collapse; margin-left: auto; margin-right: auto;">'
   for key in KEYS_DICT:
-      rem_buttons += '<tr> <td style="width: 200px;"> <a style="font-size: 15px;"> &bull; ' + key + ' (' + KEYS_DICT[key] + ') </a> </td> <td> <input id="renKeyInput_' + key + '" class="renInput" value=""> <a> <button onClick="renKey('+key+')" class="ren">REN</button> </a> </td> <td> <a href="/rem_key/' + key + '  "> <button class="rem">DEL</button> </a> </td> </tr>'
+      rem_buttons += '<tr> <td style="width: 200px;"> <a style="font-size: 15px;"> &bull; ' + key + ' (' + KEYS_DICT[key] + ')</a></td><td><input id="renKeyInput_' + key + '" class="renInput" value="" maxlength="16" placeholder="New name"> <a> <button onClick="renKey('+key+')" class="ren">Rename</button></a></td><td><a href="/rem_key/'+key+'"><button class="rem">DEL</button></a></td></tr>'
   rem_buttons += "</table>"
   
   main_html = """<!DOCTYPE html>
   <html>
     <head>
-      <style>div {width: 400px; margin: 20px auto; text-align: center; border: 3px solid #32e1e1; background-color: #555555; left: auto; right: auto;}.header {font-family: Arial, Helvetica, sans-serif; font-size: 20px; color: #32e1e1;}button {width: 395px; background-color: #32e1e1; border: none; text-decoration: none; }button.rem {background-color: #C12200; width: 40px;}button.rem:hover {background-color: red}button.ren {background-color: #ff9900; width: 40px;}button.ren:hover {background-color: #ffcc00}input {width: 296px; border: none; text-decoration: none;}button:hover {background-color: #12c1c1; border: none; text-decoration: none;} input.renInput{width: 75px} .addKey {width: 193px;} .main_heading {font-family: Arial, Helvetica, sans-serif; color: #32e1e1; font-size: 30px;}h5 {font-family: Arial, Helvetica, sans-serif; color: #32e1e1;}label{font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #32e1e1;}a {font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #32e1e1;}textarea {background-color: #303030; font-size: 11px; width: 394px; height: 75px; resize: vertical; color: #32e1e1;}body {background-color: #303030; text-align: center;}</style>
+      <style>
+      """ + css + """
+      </style>
       <script>
       window.addKey = function(){
         var input = document.getElementById("addKeyInput").value;
@@ -454,37 +459,53 @@ def resync_html_content():
     <body>
       <div>
         <br/>
-        <a class='main_heading'>DL32 MENU</a></br/>
-        <a style="font-size: 15px">--- MicroPython Edition ---</a><br/>
-        <a>by Mark Booth - </a><a href='https://github.com/Mark-Roly/DL32_mpy'>github.com/Mark-Roly/DL32_mpy</a><br/><br/>
+        <a class='main_heading'>DL32 MENU</a>
+        </br/>
+        <a style="font-size: 15px">--- MicroPython Edition ---</a>
+        <br/>
+        <a>by Mark Booth - </a><a href='https://github.com/Mark-Roly/DL32_mpy'>github.com/Mark-Roly/DL32_mpy</a>
+        <br/>
+        <br/>
+        <hr>
         <a class='header'>Device Control</a>
         <br/>
-        <a href='/unlock'><button>HTTP Unlock</button></a><br/>
-        <a href='/bell'><button>Ring bell</button></a><br/>
-        <a href='/reset'><button>Reset Board</button></a><br/><br/>
-        <a class='header'>Key Management</a>
+        <a href='/unlock'><button>HTTP Unlock</button></a>
         <br/>
-        <a href='/print_keys'><button>List authorized keys</button></a><br/>
-        <a href='/purge_keys'><button>Purge authorized keys</button></a><br/><br/>
+        <a href='/bell'><button>Ring bell</button></a>
+        <br/>
+        <a href='/reset'><button>Reset Board</button></a>
+        <hr>
         <a class='header'>File Download</a>
         <br/>
-        <a href='/download/main.py'><button>Download main.py</button></a><br/>
-        <a href='/download/boot.py'><button>Download boot.py</button></a><br/>
-        <a href='/download/dl32.cfg'><button>Download dl32.cfg</button></a><br/>
-        <a href='/download/keys.cfg'><button>Download keys.cfg</button></a><br/><br/>        
-        <a class='header'>Add Key</a> <br/>
-        <input id="addKeyInput" value="" class="addKey">
-        <button onClick="addKey()" class="addKey">Add</button>
+        <a href='/download/main.py'><button>Download main.py</button></a>
         <br/>
-        <a href='/add_mode'><button>scan-to-add</button></a><br/>
-        <br/><br/>
-        <a href='/config_network'><button>Configure Network</button></a><br/>
-        <a href='/config_mqtt'><button>Configure MQTT</button></a><br/>
-        <a href='/config_doorbell'><button>Configure Doorbell Tones</button></a><br/>
-        <hr> <a class='header'>Rename/Delete Keys</a><br/><a style="color:#ffcc00; font-size: 15px; font-weight: bold;">***This cannot be undone!***</a>
-        <br/>""" + rem_buttons + """
+        <a href='/download/boot.py'><button>Download boot.py</button></a>
+        <br/>
+        <a href='/download/dl32.cfg'><button>Download dl32.cfg</button></a>
+        <br/>
+        <a href='/download/keys.cfg'><button>Download keys.cfg</button></a>
         <hr>
-        <a>Version """ + _VERSION + """ IP Address """ + str(ip_address) + """</a><br/>
+        <a class='header'>Configuration</a>
+        <a href='/config_network'><button>Configure Network</button></a>
+        <br/>
+        <a href='/config_mqtt'><button>Configure MQTT</button></a>
+        <br/>
+        <a href='/config_doorbell'><button>Configure Doorbell Tones</button></a>
+        <hr>
+        <a class='header'>Key Management</a>
+        <br/>
+        <a style="color:#ffcc00; font-size: 15px; font-weight: bold;">***This cannot be undone!***</a>
+        <br/>
+        <a href='/add_mode'><button>scan-to-add</button></a>
+        <input type="text" placeholder="Enter key number" id="addKeyInput" value="" maxlength="8" class="addKey">
+        <button onClick="addKey()" class="addKey">Add Key</button>
+        <br/>
+        """ + rem_buttons + """
+        <a href='/purge_keys'><button>Purge all keys</button></a>
+
+        <hr>
+        <a>Version """ + _VERSION + """ IP Address """ + str(ip_address) + """</a>
+        <br/>
         <br/>
       </div>
     </body>
@@ -500,8 +521,9 @@ def resync_config_network_content():
   config_network_html = """<!DOCTYPE html>
   <html>
     <head>
-      <style>div {width: 400px; margin: 20px auto; text-align: center; border: 3px solid #32e1e1; background-color: #555555; left: auto; right: auto;}.header {font-family: Arial, Helvetica, sans-serif; font-size: 20px; color: #32e1e1;} .backNav {width: 50px; float: left;} .saveConf{width: 150px; } .config_input{width: 150px;} button {width: 395px; background-color: #32e1e1; border: none; text-decoration: none; }button.rem {background-color: #C12200; width: 40px;}button.rem:hover {background-color: red}button.ren {background-color: #ff9900; width: 40px;}button.ren:hover {background-color: #ffcc00}input {width: 296px; border: none; text-decoration: none;}button:hover {background-color: #12c1c1; border: none; text-decoration: none;} input.renInput{width: 75px} .addKey {width: 60px;} .main_heading {font-family: Arial, Helvetica, sans-serif; color: #32e1e1; font-size: 30px;}h5 {font-family: Arial, Helvetica, sans-serif; color: #32e1e1;}label{font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #32e1e1;}a {font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #32e1e1;}textarea {background-color: #303030; font-size: 11px; width: 394px; height: 75px; resize: vertical; color: #32e1e1;}body {background-color: #303030; text-align: center;}</style>
-      <script>
+      <style>
+      """ + css + """
+      </style>      <script>
       window.saveConf = function(){
         var wifi_ssid = document.getElementById("wifi_ssid").value;
         var wifi_pass = document.getElementById("wifi_pass").value;
@@ -543,8 +565,9 @@ def resync_config_mqtt_content():
   config_mqtt_html = """<!DOCTYPE html>
   <html>
     <head>
-      <style>div {width: 400px; margin: 20px auto; text-align: center; border: 3px solid #32e1e1; background-color: #555555; left: auto; right: auto;}.header {font-family: Arial, Helvetica, sans-serif; font-size: 20px; color: #32e1e1;} .backNav {width: 50px; float: left;} .saveConf{width: 150px; } .config_input{width: 150px;} button {width: 395px; background-color: #32e1e1; border: none; text-decoration: none; }button.rem {background-color: #C12200; width: 40px;}button.rem:hover {background-color: red}button.ren {background-color: #ff9900; width: 40px;}button.ren:hover {background-color: #ffcc00}input {width: 296px; border: none; text-decoration: none;}button:hover {background-color: #12c1c1; border: none; text-decoration: none;} input.renInput{width: 75px} .addKey {width: 60px;} .main_heading {font-family: Arial, Helvetica, sans-serif; color: #32e1e1; font-size: 30px;}h5 {font-family: Arial, Helvetica, sans-serif; color: #32e1e1;}label{font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #32e1e1;}a {font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #32e1e1;}textarea {background-color: #303030; font-size: 11px; width: 394px; height: 75px; resize: vertical; color: #32e1e1;}body {background-color: #303030; text-align: center;}</style>
-      <script>
+      <style>
+      """ + css + """
+      </style>      <script>
       window.saveConf = function(){
         var mqtt_brok = document.getElementById("mqtt_brok").value;
         var mqtt_port = document.getElementById("mqtt_port").value;
@@ -630,9 +653,10 @@ def resync_config_doorbell_content():
           </tr>
         </table>
         <br/>
-        <button onClick="setBell()">Save</button>
+        <button class="saveConf" onClick="setBell()">Save</button>
         <br/>
-        <a href='/config_doorbell/test'><button>Test current</button></a><br/>
+        <a href='/config_doorbell/test'><button class="saveConf">Test current</button></a><br/>
+        <a href='/config_doorbell/stop'><button class="saveConf">Stop playing</button></a><br/>
         <br/>
         <a>Version """ + _VERSION + """ IP Address """ + str(ip_address) + """</a><br/>
         <br/>
@@ -1000,20 +1024,27 @@ def content(request, key, name):
 
 @web_server.route('/set_bell/<string:tone>', methods=['GET', 'POST'])
 def content(request, tone):
-  resync_config_doorbell_content()
   global Doorbells
   global current
   print('Switching doorbell tone to ' + tone)
   current = Doorbells[tone]
   CONFIG_DICT['doorbell'] = tone
   save_config_to_esp()
+  resync_config_doorbell_content()
   return config_doorbell_html, 200, {'Content-Type': 'text/html'}
 
 @web_server.route('/config_doorbell/test', methods=['GET', 'POST'])
 def content(request):
   global current
+  doorbell.stop()
   print('Testing doorbell: ' + current["title"])
   uasyncio.create_task(ring_bell(current))
+  return config_doorbell_html, 200, {'Content-Type': 'text/html'}
+
+@web_server.route('/config_doorbell/stop', methods=['GET', 'POST'])
+def content(request):
+  global current
+  doorbell.stop()
   return config_doorbell_html, 200, {'Content-Type': 'text/html'}
 
 start_server()
