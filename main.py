@@ -90,15 +90,16 @@ opening_type = 'door'
 
 # Global parameters
 add_mode_counter = 0
+mag_state = 0
 ip_address = '0.0.0.0'
 bell_ringing = False
 add_mode = False
 sd_present = False
+mqtt_online = False
 
 # Set initial pin states
 buzzer_pin.value(0)
 lockRelay_pin.value(0)
-mag_state = 0
 
 # Define dictionaries to store configuration and authorized keys
 CONFIG_DICT = {}
@@ -106,7 +107,7 @@ KEYS_DICT = {}
 
 # Try mounting SD card and list contents. Catch error.
 try:
-  uos.mount(sd, '/sd')
+  os.mount(sd, '/sd')
   print('SD card mounted')
   print('  ' + str(os.listdir('/sd')))
   sd_present = True
@@ -114,19 +115,19 @@ except:
   print ('No SD card present')
   sd_present = False
 
-# Function for copying files
-def copy(s, t):
-    try: 
-        if os.stat(t)[0] & 0x4000:  # is directory
-            t = t.rstrip("/") + "/" + s
-    except OSError:
-        pass
-    with open(s, "rb") as s:
-        with open(t, "wb") as t:
-            while True:
-                l = s.read(512)
-                if not l: break
-                t.write(l)
+# Function for copying files (Not currently in-use)
+def copy(source, target):
+  try: 
+    if os.stat(target)[0] & 0x4000:  # is a directory
+      target = target.rstrip("/") + "/" + source
+  except OSError:
+    pass
+  with open(source, "rb") as source:
+    with open(target, "wb") as target:
+      while True:
+        l = source.read(512)
+        if not l: break
+        target.write(l)
 
 # Wipe config dictionary from memory
 def wipe_config():
@@ -204,7 +205,6 @@ current = Doorbells[CONFIG_DICT['doorbell']]
 key_NUMS = KEYS_DICT.keys()
 
 #Initialize doorbell object
-#current = Doorbells['hp']
 doorbell = music(current['music'], pins=[buzzer_pin])
 doorbell.stop()
 
@@ -265,29 +265,42 @@ def save_config_to_sd():
 
 # Save key dictionary to ESP32
 def save_keys_to_esp():
-  if file_exists('keys.cfg'):
-    #rename old file
-    refresh_time()
-    os.rename('keys.cfg', ('keys_' + str('{}{:02d}{:02d}_{:02d}{:02d}{:02d}'.format(year, month, day, hour, mins, secs) + '.cfg')))
   with open('keys.cfg', 'w') as json_file:
     json.dump(KEYS_DICT, json_file)
 
 # Save configuration dictionary to ESP32
 def save_config_to_esp():
-  if file_exists('dl32.cfg'):
-    #rename old file
-    refresh_time()
-    os.rename('dl32.cfg', ('dl32_' + str('{}{:02d}{:02d}_{:02d}{:02d}{:02d}'.format(year, month, day, hour, mins, secs) + '.cfg')))
   with open('dl32.cfg', 'w') as json_file:
     json.dump(CONFIG_DICT, json_file)
+
+
+
+
+
+
+def publish_status(message):
+  global mqtt_online
+  if mqtt_online:
+    try:
+      mqtt.publish(mqtt_sta_top, message, retain=False, qos=0)
+    except:
+      print('error publishing to MQTT topic')
+
+
+
+
+
+
+
+
+
+
+
 
 # Start Microdot Async web server
 def start_server():
   print('Starting web server on port ' + str(web_port))
-  try:
-    mqtt.publish(mqtt_sta_top, ('Starting web server on port ' + str(web_port)), retain=False, qos=0)
-  except:
-    print('error publishing to MQTT topic')
+  publish_status('Starting web server on port ' + str(web_port))
   try:
     web_server.run(port = web_port)
   except:
@@ -307,8 +320,23 @@ def import_keys_from_sd():
       os.rename('keys.cfg', 'keys_' + (str('{}{:02d}{:02d}_{:02d}{:02d}{:02d}'.format(year, month, day, hour, mins, secs))))
       save_keys_to_esp()
   else:
-    print('No file sd/' + filename + ' on SD card')
+    print('No file sd/keys.cfg on SD card')
 
+# Import config from SD card into config dictionary and overwrite dl32.cfg on ESP32
+def import_config_from_sd():
+  global sd_present
+  if (sd_present == False):
+    print ('SD Card not present')
+    return
+  if file_exists('sd/dl32.cfg'):
+    load_sd_config()
+    if file_exists('dl32.cfg'):
+      refresh_time()
+      os.rename('dl32.cfg', 'dl32' + (str('{}{:02d}{:02d}_{:02d}{:02d}{:02d}'.format(year, month, day, hour, mins, secs))))
+      save_config_to_esp()
+  else:
+    print('No file sd/dl32.cfg on SD card')
+    
 # Check for button commands at boot
 def check_boot():
   global sd_boot_hold_time
@@ -319,7 +347,7 @@ def check_boot():
         time.sleep_ms(10)
         time_held += 10
       if time_held > add_hold_time:
-        print('Loading configuration from SD card')
+        print('Loading configuration + keys from SD card')
 
 # Add a new key to the autorized keys dictionary
 def add_key(key_number):
@@ -328,13 +356,9 @@ def add_key(key_number):
     refresh_time()
     date_time = ('{}{:02d}{:02d}_{:02d}{:02d}{:02d}'.format(year, month, day, hour, mins, secs))
     KEYS_DICT[str(key_number)] = date_time
-    with open('keys.cfg', 'w') as json_file:
-      json.dump(KEYS_DICT, json_file)
+    save_keys_to_esp()
     print('  Key ' + str(key_number) + ' added to authorized list as: ' + date_time)
-    try:
-      mqtt.publish(mqtt_sta_top, 'Key ' + str(key_number) + ' added to authorized list as ' + date_time, retain=False, qos=0)
-    except:
-      print('error publishing to MQTT topic')
+    publish_status('Key ' + str(key_number) + ' added to authorized list as ' + date_time)
     resync_html_content()
   else:
     print('  Unable to add key ' + key_number)
@@ -345,13 +369,9 @@ def rem_key(key_number):
   if (len(str(key_number)) > 1 and len(str(key_number)) < 7) and (str(key_number) in KEYS_DICT):
     print ('  Removing key ' + str(key_number))
     del KEYS_DICT[str(key_number)]
-    with open('keys.cfg', 'w') as json_file:
-      json.dump(KEYS_DICT, json_file)
+    save_keys_to_esp()
     print('  Key '+ str(key_number) +' removed!')
-    try:
-      mqtt.publish(mqtt_sta_top, 'Key ' + str(key_number) + ' removed from authorized list', retain=False, qos=0)
-    except:
-      print('error publishing to MQTT topic')
+    publish_status('Key ' + str(key_number) + ' removed from authorized list')
     resync_html_content()
   else:
     print('  Unable to remove key ' + key_number)
@@ -361,13 +381,9 @@ def ren_key(key, name):
   if (len(str(key)) > 1 and len(str(key)) < 7) and (str(key) in KEYS_DICT) and (len(name) > 0) and (len(name) < 16) :
     print ('  Renaming key ' + str(key) + ' to ' + name)
     KEYS_DICT[str(key)] = name
-    with open('keys.cfg', 'w') as json_file:
-      json.dump(KEYS_DICT, json_file)
-    print('  Key '+ str(key) +' renamed!')
-    try:
-      mqtt.publish(mqtt_sta_top, 'Key ' + str(key) + ' renamed to ' + name, retain=False, qos=0)
-    except:
-      print('error publishing to MQTT topic')
+    save_keys_to_esp()
+    print('  Key '+ str(key) +' renamed to ' + name)
+    publish_status('Key ' + str(key) + ' renamed to ' + name)
     resync_html_content()
   else:
     print('  Unable to rename key ' + key)
@@ -383,10 +399,7 @@ def on_key(key_number, facility_code, keys_read):
       print ('  Authorized key: ')
       print ('  key #: ' + str(key_number))
       print ('  key belongs to ' + KEYS_DICT[str(key_number)])
-      try:
-        mqtt.publish(mqtt_sta_top, 'Authorized key ' + str(key_number) + ' (' + KEYS_DICT[str(key_number)] + ') scanned', retain=False, qos=0)
-      except:
-        print('error publishing to MQTT topic')
+      publish_status('Authorized key ' + str(key_number) + ' (' + KEYS_DICT[str(key_number)] + ') scanned')
       unlock(key_dur)
     else:
       add_mode = False
@@ -399,10 +412,7 @@ def on_key(key_number, facility_code, keys_read):
       print ('  Unauthorized key: ')
       print ('  key #: ' + str(key_number))
       print ('  Facility code: ' + str(facility_code))
-      try:
-        mqtt.publish(mqtt_sta_top, 'Unauthorized key ' + str(key_number) + ' scanned', retain=False, qos=0)
-      except:
-        print('error publishing to MQTT topic')
+      publish_status('Unauthorized key ' + str(key_number) + ' scanned')
       invalidBeep()
       np[0] = (0, 255, 255)	
       np.write()
@@ -481,6 +491,8 @@ def resync_html_content():
         <br/>
         <a href='/download/boot.py'><button>Download boot.py</button></a>
         <br/>
+        <a href='/download/doorbells.py'><button>Download doorbells.py</button></a>
+        <br/>
         <a href='/download/dl32.cfg'><button>Download dl32.cfg</button></a>
         <br/>
         <a href='/download/keys.cfg'><button>Download keys.cfg</button></a>
@@ -523,12 +535,13 @@ def resync_config_network_content():
     <head>
       <style>
       """ + css + """
-      </style>      <script>
+      </style>
+      <script>
       window.saveConf = function(){
         var wifi_ssid = document.getElementById("wifi_ssid").value;
         var wifi_pass = document.getElementById("wifi_pass").value;
         var web_port = document.getElementById("web_port").value;
-        window.location.href = "/config/";
+        window.location.href = "/config_network/update/";
       }
       </script>
     </head>
@@ -678,9 +691,8 @@ def print_keys():
 # Delete all allowed keys
 def purge_keys():
   global KEYS_DICT
-  KEYS_DICT = {}
-  with open('keys.cfg', 'w') as json_file:
-    json.dump(KEYS_DICT, json_file)
+  wipe_keys()
+  save_keys_to_esp()
   resync_html_content()
 
 # Unlock for duration specified as argument
@@ -690,19 +702,13 @@ def unlock(dur):
   lockRelay_pin.value(1)
   unlockBeep()
   print('  Unlocked')
-  try:
-    mqtt.publish(mqtt_sta_top, 'Unlocked', retain=False, qos=0)
-  except:
-    print('error publishing to MQTT topic')
+  publish_status('Unlocked')
   time.sleep_ms(dur)
   lockRelay_pin.value(0)
   np[0] = (0, 255, 255)	
   np.write()
   print('  Locked')
-  try:
-    mqtt.publish(mqtt_sta_top, 'Locked', retain=False, qos=0)
-  except:
-    print('error publishing to MQTT topic')
+  publish_status('Locked')
 
 def mon_bell_butt():
   global current
@@ -721,18 +727,12 @@ def mon_mag_sr():
   
   if (int(magSensor.value()) == 0) and (mag_state == 1):
     print(opening_type + ' sensor closed')
-    try:
-      mqtt.publish(mqtt_sta_top, opening_type + ' sensor closed', retain=False, qos=0)
-    except:
-      print('error publishing to MQTT topic')
+    publish_status(opening_type + ' sensor closed')
     mag_state = 0
   elif (int(magSensor.value()) == 1) and (mag_state == 0):
     print(opening_type + ' sensor opened')
     doorbell.stop()
-    try:
-      mqtt.publish(mqtt_sta_top, opening_type + ' sensor opened', retain=False, qos=0)
-    except:
-      print('error publishing to MQTT topic')
+    publish_status(opening_type + ' sensor opened')
     mag_state = 1
   else:
     return
@@ -754,10 +754,7 @@ def mon_exit_butt():
       uasyncio.create_task(key_add_mode())
     elif add_mode == False:
       print('Exit button pressed')
-      try:
-        mqtt.publish(mqtt_sta_top, 'Exit button pressed', retain=False, qos=0)
-      except:
-        print('error publishing to MQTT topic')
+      publish_status('Exit button pressed')
       unlock(exitBut_dur)
 
 # Async function to listen for proramming button presses
@@ -776,30 +773,32 @@ def mon_prog_butt():
       if (sd_present == False):
         print ('SD Card not present')
         return
-      print('copying SD to ESP')
+      print('Importing from SD card')
       prog_sd_beeps()
       try:
         import_keys_from_sd()
-        print('Complete')
+        import_config_from_sd()
+        print('Import from SD card completed, restarting...')
+        machine.reset()
       except:
         print('ERROR: Import from SD failed!')
     else:
-      try:
-        mqtt.publish(mqtt_sta_top, 'Prog button pressed', retain=False, qos=0)
-      except:
-        print('error publishing to MQTT topic')
+      publish_status('Prog button pressed')
       print('prog button pressed')
 
 # Async function to listed for MQTT commands
 def mon_cmd_topic():
-  try:
-    mqtt.check_msg()
-  except:
-    print('error checking MQTT topic')
+  global mqtt_online
+  if mqtt_online:
+    try:
+      mqtt.check_msg()
+    except:
+      print('error checking MQTT topic')
 
 # Async function to send PingReq messages to MQTT broker
 async def mqtt_ping():
-  while True:
+  global mqtt_online
+  while mqtt_online:
     mqtt.ping()
     await uasyncio.sleep(60)
 
@@ -813,10 +812,7 @@ async def ring_bell(tune):
   np[0] = (100, 255, 0)	
   np.write()
   print ('  Ringing bell - melody: ' + tune['title'])
-  try:
-    mqtt.publish(mqtt_sta_top, 'Ringing bell', retain=False, qos=0)
-  except:
-    print('error publishing to MQTT topic')
+  publish_status('Ringing bell')
   doorbell = music(tune['music'], pins=[buzzer_pin])
   while doorbell.tick():
     await uasyncio.sleep_ms(tune['speed'])
@@ -930,19 +926,24 @@ try:
   mqtt.set_callback(sub_cb)
   mqtt.connect()
   print ('Connected to MQTT broker ' + mqtt_brok)
+  mqtt_online = True
 except:
   print('ERROR: Could not connect to MQTT Broker')
+  mqtt_online = False
 
-try:
-  mqtt.subscribe(mqtt_cmd_top)
-  print ('Subscribed to topic ' + mqtt_cmd_top.decode('utf-8'))
-except: 
-  print('ERROR: Could not subscribe to MQTT command topic ' + mqtt_cmd_top.decode('utf-8'))
+if mqtt_online:
+  try:
+    mqtt.subscribe(mqtt_cmd_top)
+    print ('Subscribed to topic ' + mqtt_cmd_top.decode('utf-8'))
+  except: 
+    print('ERROR: Could not subscribe to MQTT command topic ' + mqtt_cmd_top.decode('utf-8'))
 
 web_server = Microdot()
 
 uasyncio.create_task(main_loop())
-uasyncio.create_task(mqtt_ping())
+
+if mqtt_online:
+  uasyncio.create_task(mqtt_ping())
 
 @web_server.route('/')
 def hello(request):
@@ -950,6 +951,12 @@ def hello(request):
 
 @web_server.route('/config_network')
 def config_network(request):
+  resync_config_network_content()
+  return config_network_html, 200, {'Content-Type': 'text/html'}
+
+@web_server.route('/config_network/update')
+def config_network_update(request):
+  #do le updates
   resync_config_network_content()
   return config_network_html, 200, {'Content-Type': 'text/html'}
 
@@ -1029,8 +1036,7 @@ def content(request, tone):
   print('Switching doorbell tone to ' + tone)
   current = Doorbells[tone]
   CONFIG_DICT['doorbell'] = tone
-  with open('dl32.cfg', 'w') as json_file:
-    json.dump(CONFIG_DICT, json_file)
+  save_config_to_esp()
   resync_config_doorbell_content()
   return config_doorbell_html, 200, {'Content-Type': 'text/html'}
 
