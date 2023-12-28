@@ -10,7 +10,7 @@ gc.collect()
 # Watchdog timeout set @ 5min
 wdt = machine.WDT(timeout = 300000)
 
-_VERSION = const('20231010')
+_VERSION = const('20231228')
 
 year, month, day, hour, mins, secs, weekday, yearday = time.localtime()
 
@@ -111,11 +111,11 @@ mqtt_online = False
 buzzer_pin.value(0)
 lockRelay_pin.value(0)
 
-np_standby = (0, 0, 1)
-np_unlocked = (0, 1, 0)
-np_invalid = (1, 0, 0)
-np_add = (1, 0, 1)
-np_doorbell = (1, 1, 1)
+np_standby = (0, 0, 255)
+np_unlocked = (0, 255, 0)
+np_invalid = (255, 0, 0)
+np_add = (255, 0, 255)
+np_doorbell = (255, 255, 255)
 
 np = neopixel.NeoPixel(neopix_pin, 1)	
 np[0] = np_standby	
