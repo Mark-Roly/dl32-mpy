@@ -37,20 +37,16 @@ print('Current Date/Time: ' + '{}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}'.format(yea
 # sd = SDCard(slot=2)
 
 # 1.1 Pins w/TinyPico adapter - Uncomment if using board revision 1.1 with tinypico adapter
-buzzer_pin = machine.Pin(14, machine.Pin.OUT)
-neopix_pin = machine.Pin(21, machine.Pin.OUT)
-lockRelay_pin = machine.Pin(27, machine.Pin.OUT)
-progButton_pin = machine.Pin(4, machine.Pin.IN, machine.Pin.PULL_UP)
-exitButton_pin = machine.Pin(32, machine.Pin.IN, machine.Pin.PULL_UP)
-bellButton_pin = machine.Pin(33, machine.Pin.IN, machine.Pin.PULL_UP)
-magSensor = machine.Pin(22, machine.Pin.IN, machine.Pin.PULL_UP)
-wiegand_0 = 25
-wiegand_1 = 26
-sd = machine.SDCard(slot=2)
-
-np = neopixel.NeoPixel(neopix_pin, 1)	
-np[0] = (0, 255, 255)	
-np.write()
+# buzzer_pin = machine.Pin(14, machine.Pin.OUT)
+# neopix_pin = machine.Pin(21, machine.Pin.OUT)
+# lockRelay_pin = machine.Pin(27, machine.Pin.OUT)
+# progButton_pin = machine.Pin(4, machine.Pin.IN, machine.Pin.PULL_UP)
+# exitButton_pin = machine.Pin(32, machine.Pin.IN, machine.Pin.PULL_UP)
+# bellButton_pin = machine.Pin(33, machine.Pin.IN, machine.Pin.PULL_UP)
+# magSensor = machine.Pin(22, machine.Pin.IN, machine.Pin.PULL_UP)
+# wiegand_0 = 25
+# wiegand_1 = 26
+# sd = machine.SDCard(slot=2)
 
 # 2.0 Pins - Uncomment if using S2 Mini board revision
 # buzzer_pin = machine.Pin(14, Pin.OUT)
@@ -64,16 +60,30 @@ np.write()
 # wiegand_1 = 17
 
 # 3.0 Pins - Uncomment if using S3 Wemos board revision
-# buzzer_pin = machine.Pin(16, Pin.OUT)
-# neopix_pin = machine.Pin(13, Pin.OUT)
-# lockRelay_pin = machine.Pin(2, Pin.OUT)
-# progButton_pin = machine.Pin(8, Pin.IN, Pin.PULL_UP)
-# exitButton_pin = machine.Pin(9, Pin.IN, Pin.PULL_UP)
-# bellButton_pin = machine.Pin(11, Pin.IN, Pin.PULL_UP)
-# magSensor = machine.Pin(15, Pin.IN, Pin.PULL_UP)
-# wiegand_0 = 12
-# wiegand_1 = 10
-# sd = sdcard.SDCard(machine.SPI(1, sck=machine.Pin(5), mosi=machine.Pin(6), miso=machine.Pin(8)), machine.Pin(7))
+buzzer_pin = machine.Pin(14, Pin.OUT)
+neopix_pin = machine.Pin(11, Pin.OUT)
+lockRelay_pin = machine.Pin(1, Pin.OUT)
+progButton_pin = machine.Pin(6, Pin.IN, Pin.PULL_UP)
+exitButton_pin = machine.Pin(21, Pin.IN, Pin.PULL_UP)
+bellButton_pin = machine.Pin(17, Pin.IN, Pin.PULL_UP)
+magSensor = machine.Pin(15, Pin.IN, Pin.PULL_UP)
+wiegand_0 = 16
+wiegand_1 = 18
+
+try:
+  sd = sdcard.SDCard(machine.SPI(1, sck=machine.Pin(38), mosi=machine.Pin(36), miso=machine.Pin(35)), machine.Pin(34))
+except:
+  print ('No SD card present')
+  sd_present = False
+  
+# 3.0 SD card Pins
+# CD DAT3 CS 34
+# CMD DI DIN MOSI 36
+# CLK SCLK 38
+# DAT0 D0 MISO 35
+
+
+
 
 # Tunable parameters
 exitBut_dur = 5000
@@ -100,6 +110,16 @@ mqtt_online = False
 # Set initial pin states
 buzzer_pin.value(0)
 lockRelay_pin.value(0)
+
+np_standby = (0, 0, 1)
+np_unlocked = (0, 1, 0)
+np_invalid = (1, 0, 0)
+np_add = (1, 0, 1)
+np_doorbell = (1, 1, 1)
+
+np = neopixel.NeoPixel(neopix_pin, 1)	
+np[0] = np_standby	
+np.write()
 
 # Define dictionaries to store configuration and authorized keys
 CONFIG_DICT = {}
@@ -407,14 +427,14 @@ def on_key(key_number, facility_code, keys_read):
       add_mode_counter = add_mode_intervals
   else:
     if add_mode == False:
-      np[0] = (0, 255, 0)	
+      np[0] = np_unlocked	
       np.write()
       print ('  Unauthorized key: ')
       print ('  key #: ' + str(key_number))
       print ('  Facility code: ' + str(facility_code))
       publish_status('Unauthorized key ' + str(key_number) + ' scanned')
       invalidBeep()
-      np[0] = (0, 255, 255)	
+      np[0] = np_standby
       np.write()
     else:
       add_key(key_number)
@@ -697,7 +717,7 @@ def purge_keys():
 
 # Unlock for duration specified as argument
 def unlock(dur):
-  np[0] = (255, 0, 0)	
+  np[0] = np_unlocked
   np.write()
   lockRelay_pin.value(1)
   unlockBeep()
@@ -705,7 +725,7 @@ def unlock(dur):
   publish_status('Unlocked')
   time.sleep_ms(dur)
   lockRelay_pin.value(0)
-  np[0] = (0, 255, 255)	
+  np[0] = np_standby
   np.write()
   print('  Locked')
   publish_status('Locked')
@@ -809,7 +829,7 @@ async def ring_bell(tune):
   if (bell_ringing) or (silent_mode):
     return
   bell_ringing = True
-  np[0] = (100, 255, 0)	
+  np[0] = np_doorbell
   np.write()
   print ('  Ringing bell - melody: ' + tune['title'])
   publish_status('Ringing bell')
@@ -818,7 +838,7 @@ async def ring_bell(tune):
     await uasyncio.sleep_ms(tune['speed'])
 
   doorbell.stop()
-  np[0] = (0, 255, 255)
+  np[0] = np_standby
   np.write()
   bell_ringing = False
   print ('  Bell finished')
@@ -829,7 +849,7 @@ def key_add_mode():
   global add_mode_intervals
   global add_mode_counter
   add_mode = True
-  np[0] = (150, 255, 130) # White	
+  np[0] = np_add
   np.write()
   print('Key add mode')
   add_mode_counter = 0
@@ -843,7 +863,7 @@ def key_add_mode():
   if add_mode == True:
     print('No key detected.')
     add_mode = False
-  np[0] = (0, 255, 255)	
+  np[0] = np_standby
   np.write()
 
 # "Beep-Beep"
