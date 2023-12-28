@@ -10,7 +10,7 @@ gc.collect()
 # Watchdog timeout set @ 5min
 wdt = machine.WDT(timeout = 300000)
 
-_VERSION = const('20231228')
+_VERSION = const('20231229')
 
 year, month, day, hour, mins, secs, weekday, yearday = time.localtime()
 
@@ -69,6 +69,10 @@ bellButton_pin = machine.Pin(17, Pin.IN, Pin.PULL_UP)
 magSensor = machine.Pin(15, Pin.IN, Pin.PULL_UP)
 wiegand_0 = 16
 wiegand_1 = 18
+DS01 = machine.Pin(33, Pin.IN, Pin.PULL_UP)
+DS02 = machine.Pin(37, Pin.IN, Pin.PULL_UP)
+DS03 = machine.Pin(5, Pin.IN, Pin.PULL_UP)
+DS04 = machine.Pin(10, Pin.IN, Pin.PULL_UP)
 
 try:
   sd = sdcard.SDCard(machine.SPI(1, sck=machine.Pin(38), mosi=machine.Pin(36), miso=machine.Pin(35)), machine.Pin(34))
@@ -82,19 +86,18 @@ except:
 # CLK SCLK 38
 # DAT0 D0 MISO 35
 
-
-
-
 # Tunable parameters
 exitBut_dur = 5000
 http_dur = 10000
 key_dur = 5000
 mqtt_dur = 10000
+garageMode_dur = 500
 addKey_dur = 15000
 add_hold_time = 2000
 sd_boot_hold_time = 3000
 magnetic_sensor_present = True
 silent_mode = False
+garage_mode = False
 add_mode_intervals = 10
 opening_type = 'door'
 
@@ -933,6 +936,31 @@ async def main_loop():
     mon_mag_sr()
     await uasyncio.sleep_ms(50)
   
+if int(DS01.value()) == 1:
+  print('DS01 ON')
+else:
+  print('DS01 OFF')
+
+if int(DS02.value()) == 1:
+  print('DS02 ON')
+else:
+  print('DS02 OFF')
+
+if int(DS03.value()) == 1:
+  print('DS03 ON')
+else:
+  print('DS03 OFF')
+
+if int(DS04.value()) == 1:
+  print('DS04 ON - Garage Mode Activated')
+  garage_mode = True
+  exitBut_dur = garageMode_dur
+  http_dur = garageMode_dur
+  key_dur = garageMode_dur
+  mqtt_dur = garageMode_dur
+else:
+  print('DS04 OFF')
+
 if silent_mode == True:
   print('Silent Mode Activated')
 
