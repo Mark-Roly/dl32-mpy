@@ -2,6 +2,7 @@ from microdot_asyncio import Microdot, send_file
 from umqtt.simple import MQTTClient
 from wiegand import Wiegand
 from buzzer_music import music
+from ota import OTAUpdater
 import sdcard, machine, neopixel, time, uasyncio, os
 from doorbells import Doorbells
 
@@ -98,6 +99,7 @@ sd_boot_hold_time = 3000
 magnetic_sensor_present = True
 silent_mode = False
 garage_mode = False
+ota_mode = False
 add_mode_intervals = 10
 opening_type = 'door'
 
@@ -109,6 +111,9 @@ bell_ringing = False
 add_mode = False
 sd_present = False
 mqtt_online = False
+
+# OTA variables
+firmware_url = "https://raw.githubusercontent.com/Mark-Roly/DL32_mpy/main/"
 
 # Set initial pin states
 buzzer_pin.value(0)
@@ -942,12 +947,15 @@ else:
   print('DS01 OFF')
 
 if int(DS02.value()) == 1:
-  print('DS02 ON')
+  print('DS02 ON - OTA Mode enabled')
+  ota_updater = OTAUpdater(wifi_ssid, wifi_pass, firmware_url, "main.py")
+  ota_updater.download_and_install_update_if_available()
 else:
   print('DS02 OFF')
 
 if int(DS03.value()) == 1:
-  print('DS03 ON')
+  print('DS03 ON - Silent Mode active')
+  silent_mode = True
 else:
   print('DS03 OFF')
 
@@ -962,7 +970,7 @@ else:
   print('DS04 OFF')
 
 if silent_mode == True:
-  print('Silent Mode Activated')
+  print('Silent Mode activated')
 
 try:
   connect_wifi()
