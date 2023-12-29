@@ -11,7 +11,7 @@ gc.collect()
 # Watchdog timeout set @ 5min
 wdt = machine.WDT(timeout = 300000)
 
-_VERSION = const('20231229')
+_VERSION = const('20231229a')
 
 year, month, day, hour, mins, secs, weekday, yearday = time.localtime()
 
