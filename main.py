@@ -2,7 +2,7 @@ from microdot_asyncio import Microdot, send_file
 from umqtt.simple import MQTTClient
 from wiegand import Wiegand
 from buzzer_music import music
-from ota import OTAUpdater
+import ugit
 import sdcard, machine, neopixel, time, uasyncio, os
 from doorbells import Doorbells
 
@@ -11,7 +11,7 @@ gc.collect()
 # Watchdog timeout set @ 5min
 wdt = machine.WDT(timeout = 300000)
 
-_VERSION = const('20231229a')
+_VERSION = const('20231230')
 
 year, month, day, hour, mins, secs, weekday, yearday = time.localtime()
 
@@ -111,9 +111,6 @@ bell_ringing = False
 add_mode = False
 sd_present = False
 mqtt_online = False
-
-# OTA variables
-firmware_url = "https://raw.githubusercontent.com/Mark-Roly/DL32_mpy/main/"
 
 # Set initial pin states
 buzzer_pin.value(0)
@@ -219,7 +216,7 @@ def load_sd_keys():
   except:
     print('ERROR: Could not load sd/keys.cfg into keys dictionary')
 
-wifi_ssid= (CONFIG_DICT['wifi_ssid'])
+wifi_ssid = (CONFIG_DICT['wifi_ssid'])
 wifi_pass = (CONFIG_DICT['wifi_pass'])
 mqtt_clid = (CONFIG_DICT['mqtt_clid'])
 mqtt_brok = (CONFIG_DICT['mqtt_brok'])
@@ -301,11 +298,6 @@ def save_config_to_esp():
   with open('dl32.cfg', 'w') as json_file:
     json.dump(CONFIG_DICT, json_file)
 
-
-
-
-
-
 def publish_status(message):
   global mqtt_online
   if mqtt_online:
@@ -313,17 +305,6 @@ def publish_status(message):
       mqtt.publish(mqtt_sta_top, message, retain=False, qos=0)
     except:
       print('error publishing to MQTT topic')
-
-
-
-
-
-
-
-
-
-
-
 
 # Start Microdot Async web server
 def start_server():
@@ -948,8 +929,8 @@ else:
 
 if int(DS02.value()) == 1:
   print('DS02 ON - OTA Mode enabled')
-  ota_updater = OTAUpdater(wifi_ssid, wifi_pass, firmware_url, "main.py")
-  ota_updater.download_and_install_update_if_available()
+  ota_mode = True
+
 else:
   print('DS02 OFF')
 
@@ -977,6 +958,10 @@ try:
 except:
   print('ERROR: Could not connect to WiFi')
 
+if ota_mode == True:
+  print('Running OTA check...')
+  ugit.pull('main.py', 'https://raw.githubusercontent.com/Mark-Roly/DL32_mpy/main/main.py')
+
 try:
   mqtt = MQTTClient(mqtt_clid, mqtt_brok, port=mqtt_port, user=mqtt_user, password=mqtt_pass, keepalive=300)
   mqtt.set_callback(sub_cb)
@@ -984,8 +969,8 @@ try:
   print ('Connected to MQTT broker ' + mqtt_brok)
   mqtt_online = True
 except:
-  print('ERROR: Could not connect to MQTT Broker')
-  mqtt_online = False
+   print('ERROR: Could not connect to MQTT Broker')
+   mqtt_online = False
 
 if mqtt_online:
   try:
