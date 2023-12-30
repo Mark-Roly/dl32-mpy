@@ -488,11 +488,11 @@ def resync_html_content():
         <hr>
         <a class='header'>Device Control</a>
         <br/>
-        <a href='/unlock'><button>HTTP Unlock</button></a>
+        <a href='/unlock'><button>HTTP unlock</button></a>
         <br/>
         <a href='/bell'><button>Ring bell</button></a>
         <br/>
-        <a href='/reset'><button>Reset Board</button></a>
+        <a href='/reset'><button>Reset board</button></a>
         <hr>
         <a class='header'>File Download</a>
         <br/>
@@ -511,7 +511,9 @@ def resync_html_content():
         <br/>
         <a href='/config_mqtt'><button>Configure MQTT</button></a>
         <br/>
-        <a href='/config_doorbell'><button>Configure Doorbell Tones</button></a>
+        <a href='/config_doorbell'><button>Configure Doorbell tones</button></a>
+        <br/>
+        <a href='/firmware_update'><button>Firmware update</button></a>
         <hr>
         <a class='header'>Key Management</a>
         <br/>
@@ -630,6 +632,40 @@ def resync_config_mqtt_content():
   </html>"""
   
 resync_config_mqtt_content()
+
+# Resync contents of static HTML webpage to take into account changes
+def resync_firmware_update_content():
+  global firmware_update_html
+  
+  firmware_update_html = """<!DOCTYPE html>
+  <html>
+    <head>
+      <style>
+      """ + css + """
+      </style>
+    </head>
+    <body>
+      <div>
+        <a href="/"><button class="backNav">Back</button></a><br/>
+        <a class='main_heading'>DL32 Menu</a></br/>
+        <a style="font-size: 15px">--- MicroPython Edition ---</a><br/>
+        <a>by Mark Booth - </a><a href='https://github.com/Mark-Roly/DL32_mpy'>github.com/Mark-Roly/DL32_mpy</a><br/><br/>
+        <a class='header'>Firmware Update</a>
+        <br/> <br/>
+        <a style="color:#ff0000; font-size: 15px; font-weight: bold;">***!!!WARNING!!!***</a>
+        <br/>
+        <a style="color:#ffcc00; font-size: 15px;">This will pull the latest main.py from the github.</a>
+        <br/>
+        <a style="color:#ffcc00; font-size: 15px;">Do not click this if you don't know what you are doing!</a>
+        <a href='/execute_update'><button style="background-color:#ff0000;">UPDATE THE FIRMWARE</button></a>
+        <br/><br/>
+        <a>Version """ + _VERSION + """ IP Address """ + str(ip_address) + """</a><br/>
+        <br/>
+      </div>
+    </body>
+  </html>"""
+  
+resync_firmware_update_content()
 
 # Resync contents of static HTML webpage to take into account changes
 def resync_config_doorbell_content():
@@ -795,6 +831,13 @@ def mon_prog_butt():
       publish_status('Prog button pressed')
       print('prog button pressed')
 
+def perform_OTA():
+  print('Pulling OTA update...')
+  ugit.pull('main.py', 'https://raw.githubusercontent.com/Mark-Roly/DL32_mpy/main/main.py')
+  print('OTA complete, resetting')
+  time.sleep_ms(5000)
+  machine.reset()
+
 # Async function to listed for MQTT commands
 def mon_cmd_topic():
   global mqtt_online
@@ -959,11 +1002,7 @@ except:
   print('ERROR: Could not connect to WiFi')
 
 if ota_mode == True:
-  print('Pulling OTA update...')
-  ugit.pull('main.py', 'https://raw.githubusercontent.com/Mark-Roly/DL32_mpy/main/main.py')
-  print('OTA complete.')
-  time.sleep_ms(5000)
-  machine.reset()
+  perform_OTA()
 
 try:
   mqtt = MQTTClient(mqtt_clid, mqtt_brok, port=mqtt_port, user=mqtt_user, password=mqtt_pass, keepalive=300)
@@ -1013,6 +1052,11 @@ def config_mqtt(request):
 def config_doorbell(request):
   resync_config_doorbell_content()
   return config_doorbell_html, 200, {'Content-Type': 'text/html'}
+
+@web_server.route('/firmware_update')
+def firmware_update(request):
+  resync_firmware_update_content()
+  return firmware_update_html, 200, {'Content-Type': 'text/html'}
 
 @web_server.route('/unlock')
 def unlock_http(request):
@@ -1097,5 +1141,11 @@ def content(request):
   global current
   doorbell.stop()
   return config_doorbell_html, 200, {'Content-Type': 'text/html'}
+
+@web_server.route('/execute_update', methods=['GET', 'POST'])
+def execute_update_http(request):
+  print('OTA update command recieved from WebUI')
+  perform_OTA()
+  return main_html, 200, {'Content-Type': 'text/html'}
 
 start_server()
