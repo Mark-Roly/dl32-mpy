@@ -959,8 +959,11 @@ except:
   print('ERROR: Could not connect to WiFi')
 
 if ota_mode == True:
-  print('Running OTA check...')
+  print('Pulling OTA update...')
   ugit.pull('main.py', 'https://raw.githubusercontent.com/Mark-Roly/DL32_mpy/main/main.py')
+  print('OTA complete.')
+  time.sleep_ms(5000)
+  machine.reset()
 
 try:
   mqtt = MQTTClient(mqtt_clid, mqtt_brok, port=mqtt_port, user=mqtt_user, password=mqtt_pass, keepalive=300)
