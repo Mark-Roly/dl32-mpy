@@ -2,14 +2,16 @@ from microdot_asyncio import Microdot, send_file
 from umqtt.simple import MQTTClient
 from wiegand import Wiegand
 from buzzer_music import music
-import ugit
-import sdcard, machine, neopixel, time, uasyncio, os
 from doorbells import Doorbells
+import ugit
+import sdcard, machine, neopixel, time, uasyncio, os, webrepl
 
 gc.collect()
 
-# Watchdog timeout set @ 5min
-wdt = machine.WDT(timeout = 300000)
+webrepl.start()
+
+# Watchdog timeout set @ 10min
+wdt = machine.WDT(timeout = 600000)
 
 _VERSION = const('20231230')
 
