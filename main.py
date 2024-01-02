@@ -4,16 +4,14 @@ from wiegand import Wiegand
 from buzzer_music import music
 from doorbells import Doorbells
 import ugit
-import sdcard, machine, neopixel, time, uasyncio, os, webrepl
+import sdcard, machine, neopixel, time, uasyncio, os
 
 gc.collect()
-
-webrepl.start()
 
 # Watchdog timeout set @ 10min
 wdt = machine.WDT(timeout = 600000)
 
-_VERSION = const('20231230')
+_VERSION = const('20240102')
 
 year, month, day, hour, mins, secs, weekday, yearday = time.localtime()
 
@@ -63,22 +61,26 @@ print('Current Date/Time: ' + '{}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}'.format(yea
 # wiegand_1 = 17
 
 # 3.0 Pins - Uncomment if using S3 Wemos board revision
-buzzer_pin = machine.Pin(14, Pin.OUT)
-neopix_pin = machine.Pin(11, Pin.OUT)
-lockRelay_pin = machine.Pin(1, Pin.OUT)
-progButton_pin = machine.Pin(6, Pin.IN, Pin.PULL_UP)
-exitButton_pin = machine.Pin(21, Pin.IN, Pin.PULL_UP)
-bellButton_pin = machine.Pin(17, Pin.IN, Pin.PULL_UP)
-magSensor = machine.Pin(15, Pin.IN, Pin.PULL_UP)
+buzzer_pin = machine.Pin(14, machine.Pin.OUT)
+neopix_pin = machine.Pin(11, machine.Pin.OUT)
+lockRelay_pin = machine.Pin(1, machine.Pin.OUT)
+progButton_pin = machine.Pin(6, machine.Pin.IN, machine.Pin.PULL_UP)
+exitButton_pin = machine.Pin(21, machine.Pin.IN, machine.Pin.PULL_UP)
+bellButton_pin = machine.Pin(17, machine.Pin.IN, machine.Pin.PULL_UP)
+magSensor = machine.Pin(15, machine.Pin.IN, machine.Pin.PULL_UP)
 wiegand_0 = 16
 wiegand_1 = 18
-DS01 = machine.Pin(33, Pin.IN, Pin.PULL_UP)
-DS02 = machine.Pin(37, Pin.IN, Pin.PULL_UP)
-DS03 = machine.Pin(5, Pin.IN, Pin.PULL_UP)
-DS04 = machine.Pin(10, Pin.IN, Pin.PULL_UP)
+DS01 = machine.Pin(33, machine.Pin.IN, machine.Pin.PULL_UP)
+DS02 = machine.Pin(37, machine.Pin.IN, machine.Pin.PULL_UP)
+DS03 = machine.Pin(5, machine.Pin.IN, machine.Pin.PULL_UP)
+DS04 = machine.Pin(10, machine.Pin.IN, machine.Pin.PULL_UP)
 
 try:
   sd = sdcard.SDCard(machine.SPI(1, sck=machine.Pin(38), mosi=machine.Pin(36), miso=machine.Pin(35)), machine.Pin(34))
+  os.mount(sd, '/sd')
+  print('SD card mounted')
+  print('  ' + str(os.listdir('/sd')))
+  sd_present = True
 except:
   print ('No SD card present')
   sd_present = False
@@ -94,7 +96,7 @@ exitBut_dur = 5000
 http_dur = 10000
 key_dur = 5000
 mqtt_dur = 10000
-garageMode_dur = 500
+gar_dur = 500
 addKey_dur = 15000
 add_hold_time = 2000
 sd_boot_hold_time = 3000
@@ -104,6 +106,7 @@ garage_mode = False
 ota_mode = False
 add_mode_intervals = 10
 opening_type = 'door'
+rgb_brightness = 1 #(1-255)
 
 # Global parameters
 add_mode_counter = 0
@@ -118,11 +121,11 @@ mqtt_online = False
 buzzer_pin.value(0)
 lockRelay_pin.value(0)
 
-np_standby = (0, 0, 255)
-np_unlocked = (0, 255, 0)
-np_invalid = (255, 0, 0)
-np_add = (255, 0, 255)
-np_doorbell = (255, 255, 255)
+np_standby = (0, 0, rgb_brightness)
+np_unlocked = (0, rgb_brightness, 0)
+np_invalid = (rgb_brightness, 0, 0)
+np_add = (rgb_brightness, 0, rgb_brightness)
+np_doorbell = (rgb_brightness, rgb_brightness, rgb_brightness)
 
 np = neopixel.NeoPixel(neopix_pin, 1)	
 np[0] = np_standby	
@@ -131,16 +134,6 @@ np.write()
 # Define dictionaries to store configuration and authorized keys
 CONFIG_DICT = {}
 KEYS_DICT = {}
-
-# Try mounting SD card and list contents. Catch error.
-try:
-  os.mount(sd, '/sd')
-  print('SD card mounted')
-  print('  ' + str(os.listdir('/sd')))
-  sd_present = True
-except:
-  print ('No SD card present')
-  sd_present = False
 
 # Function for copying files (Not currently in-use)
 def copy(source, target):
@@ -438,23 +431,47 @@ Wiegand(wiegand_0, wiegand_1, on_key)
 def sub_cb(topic, msg):
   print('Message arrived on topic ' + topic.decode('utf-8') + ': ' + msg.decode('utf-8'))
   if topic == mqtt_cmd_top:
-    if msg.decode('utf-8') == 'unlock':
+    if ((msg.decode('utf-8') == 'unlock') and garage_mode == False):
       unlock(mqtt_dur)
+    elif ((msg.decode('utf-8') == 'toggle') and garage_mode == True):
+      unlock(gar_dur)
     else:
       print ('Command not recognized!')
 
-css = "div {width: 400px; margin: 20px auto; text-align: center; border: 3px solid #32e1e1; background-color: #555555; left: auto; right: auto;} hr {border-bottom: 1px solid #32e1e1} .header {font-family: Arial, Helvetica, sans-serif; font-size: 20px; color: #32e1e1} button {width: 395px; background-color: #32e1e1; border: none; text-decoration: none} .backNav {width: 50px; float: left;} .saveConf{width: 150px; } .config_input{width: 150px;} button.rem {background-color: #C12200; width: 30px; padding-left: 2px;} button.rem:hover {background-color: red} button.ren {background-color: #ff9900; width: 55px; padding-left: 1px} button.ren:hover {background-color: #ffcc00} input {width: 296px; border: none; text-decoration: none;} button:hover {background-color: #12c1c1; border: none; text-decoration: none;} input.renInput{width: 75px} .addKey {width: 193px;} .main_heading {font-family: Arial, Helvetica, sans-serif; color: #32e1e1; font-size: 30px;} h5 {font-family: Arial, Helvetica, sans-serif; color: #32e1e1} label {font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #32e1e1;} a {font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #32e1e1;}textarea {background-color: #303030; font-size: 11px; width: 394px; height: 75px; resize: vertical; color: #32e1e1;} body {background-color: #303030; text-align: center;} "
+css = "div {width: 400px; margin: 20px auto; text-align: center; border: 3px solid #32e1e1; background-color: #555555; left: auto; right: auto;} hr {border-bottom: 1px solid #32e1e1} .header {font-family: Arial, Helvetica, sans-serif; font-size: 20px; color: #32e1e1} .statusText {font-size: 12px} button {width: 395px; background-color: #32e1e1; border: none; text-decoration: none} .backNav {width: 50px; float: left;} .saveConf{width: 150px; } .config_input{width: 150px;} button.rem {background-color: #C12200; width: 30px; padding-left: 2px;} button.rem:hover {background-color: red} button.ren {background-color: #ff9900; width: 55px; padding-left: 1px} button.ren:hover {background-color: #ffcc00} input {width: 296px; border: none; text-decoration: none;} button:hover {background-color: #12c1c1; border: none; text-decoration: none;} input.renInput{width: 75px} .addKey {width: 193px;} .main_heading {font-family: Arial, Helvetica, sans-serif; color: #32e1e1; font-size: 30px;} h5 {font-family: Arial, Helvetica, sans-serif; color: #32e1e1} label {font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #32e1e1;} a {font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #32e1e1;} textarea {background-color: #303030; font-size: 11px; width: 394px; height: 75px; resize: vertical; color: #32e1e1;} body {background-color: #303030; text-align: center;} "
 
 
 # Resync contents of static HTML webpage to take into account changes
 def resync_html_content():
   global main_html
   global ip_address
-  
+
   rem_buttons = '<table style="width: 380px; text-align: left; border: 0px solid black; border-collapse: collapse; margin-left: auto; margin-right: auto;">'
   for key in KEYS_DICT:
       rem_buttons += '<tr> <td style="width: 200px;"> <a style="font-size: 15px;"> &bull; ' + key + ' (' + KEYS_DICT[key] + ')</a></td><td><input id="renKeyInput_' + key + '" class="renInput" value="" maxlength="16" placeholder="New name"> <a> <button onClick="renKey('+key+')" class="ren">Rename</button></a></td><td><a href="/rem_key/'+key+'"><button class="rem">DEL</button></a></td></tr>'
   rem_buttons += "</table>"
+
+  if garage_mode == True:
+    modeText = '<a class="statusText"><b>Mode:</b> Garage</a>'
+    mainButtonText = 'HTTP Open/Close'
+  else:
+    modeText = '<a class="statusText"><b>Mode:</b> Lock</a>'
+    mainButtonText = 'HTTP Unlock'
+
+  if magnetic_sensor_present:
+    mainButtonText = 'HTTP Open/Close'
+    if mag_state == 1:
+      doorStateText = '<a class="statusText"><b>Door State:</b> Open </a>'
+    else:
+      doorStateText = '<a class="statusText"><b>Door State:</b> Closed </a>'
+  else:
+    doorStateText = ''
+
+  if sd_present:
+    sdPresentText = '<a class="statusText"><b>SD Card Present:</b> Yes </a>'
+  else:
+    sdPresentText = '<a class="statusText"><b>SD Card Present:</b> No </a>'
+   
   
   main_html = """<!DOCTYPE html>
   <html>
@@ -486,11 +503,16 @@ def resync_html_content():
         <br/>
         <a>by Mark Booth - </a><a href='https://github.com/Mark-Roly/DL32_mpy'>github.com/Mark-Roly/DL32_mpy</a>
         <br/>
+        <hr>
+        """ + modeText + """
         <br/>
+        """ + doorStateText + """
+        <br/>
+        """ + sdPresentText + """
         <hr>
         <a class='header'>Device Control</a>
         <br/>
-        <a href='/unlock'><button>HTTP unlock</button></a>
+        <a href='/unlock'><button> """ + mainButtonText + """ </button></a>
         <br/>
         <a href='/bell'><button>Ring bell</button></a>
         <br/>
@@ -656,7 +678,7 @@ def resync_firmware_update_content():
         <br/> <br/>
         <a style="color:#ff0000; font-size: 15px; font-weight: bold;">***!!!WARNING!!!***</a>
         <br/>
-        <a style="color:#ffcc00; font-size: 15px;">This will pull the latest main.py from the github.</a>
+        <a style="color:#ffcc00; font-size: 15px;">This will pull the latest main.py from the </a> <a style="font-size: 15px;", href="github.com/Mark-Roly/DL32_mpy">github.</a>
         <br/>
         <a style="color:#ffcc00; font-size: 15px;">Do not click this if you don't know what you are doing!</a>
         <a href='/execute_update'><button style="background-color:#ff0000;">UPDATE THE FIRMWARE</button></a>
@@ -988,10 +1010,10 @@ else:
 if int(DS04.value()) == 1:
   print('DS04 ON - Garage Mode Activated')
   garage_mode = True
-  exitBut_dur = garageMode_dur
-  http_dur = garageMode_dur
-  key_dur = garageMode_dur
-  mqtt_dur = garageMode_dur
+  exitBut_dur = gar_dur
+  http_dur = gar_dur
+  key_dur = gar_dur
+  mqtt_dur = gar_dur
 else:
   print('DS04 OFF')
 
@@ -1010,7 +1032,7 @@ try:
   mqtt = MQTTClient(mqtt_clid, mqtt_brok, port=mqtt_port, user=mqtt_user, password=mqtt_pass, keepalive=300)
   mqtt.set_callback(sub_cb)
   mqtt.connect()
-  print ('Connected to MQTT broker ' + mqtt_brok)
+  print ('Connected to MQTT broker ' + mqtt_brok + ' as client ' + mqtt_clid)
   mqtt_online = True
 except:
    print('ERROR: Could not connect to MQTT Broker')

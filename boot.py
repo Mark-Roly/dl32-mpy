@@ -1,9 +1,7 @@
-from machine import Pin
-import network
-import json
-import time
-import esp
-import gc
+import network, json, esp, gc
+import webrepl
 
 gc.collect()
 esp.osdebug(None)
+
+webrepl.start()
