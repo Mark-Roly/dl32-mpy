@@ -11,7 +11,7 @@ gc.collect()
 # Watchdog timeout set @ 10min
 wdt = machine.WDT(timeout = 600000)
 
-_VERSION = const('20240102')
+_VERSION = const('20240104')
 
 year, month, day, hour, mins, secs, weekday, yearday = time.localtime()
 
@@ -411,7 +411,7 @@ def on_key(key_number, facility_code, keys_read):
       add_mode_counter = add_mode_intervals
   else:
     if add_mode == False:
-      np[0] = np_unlocked	
+      np[0] = np_invalid	
       np.write()
       print ('  Unauthorized key: ')
       print ('  key #: ' + str(key_number))
