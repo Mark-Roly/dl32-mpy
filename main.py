@@ -11,9 +11,15 @@ gc.collect()
 # Watchdog timeout set @ 10min
 wdt = machine.WDT(timeout = 600000)
 
-_VERSION = const('20240104')
+_VERSION = const('20240105')
 
 year, month, day, hour, mins, secs, weekday, yearday = time.localtime()
+
+bell_ringing = False
+add_mode = False
+sd_present = False
+mqtt_online = False
+attached_to_board = False
 
 print('DL32 - MicroPython Edition')
 print('Version: ' + _VERSION)
@@ -112,10 +118,6 @@ rgb_brightness = 1 #(1-255)
 add_mode_counter = 0
 mag_state = 0
 ip_address = '0.0.0.0'
-bell_ringing = False
-add_mode = False
-sd_present = False
-mqtt_online = False
 
 # Set initial pin states
 buzzer_pin.value(0)
@@ -988,26 +990,23 @@ async def main_loop():
     mon_cmd_topic()
     mon_mag_sr()
     await uasyncio.sleep_ms(50)
-  
-if int(DS01.value()) == 1:
+
+
+if int(DS01.value()) == 0:
   print('DS01 ON')
 else:
   print('DS01 OFF')
-
-if int(DS02.value()) == 1:
+if int(DS02.value()) == 0:
   print('DS02 ON - OTA Mode enabled')
   ota_mode = True
-
 else:
   print('DS02 OFF')
-
-if int(DS03.value()) == 1:
+if int(DS03.value()) == 0:
   print('DS03 ON - Silent Mode active')
   silent_mode = True
 else:
   print('DS03 OFF')
-
-if int(DS04.value()) == 1:
+if int(DS04.value()) == 0:
   print('DS04 ON - Garage Mode Activated')
   garage_mode = True
   exitBut_dur = gar_dur
