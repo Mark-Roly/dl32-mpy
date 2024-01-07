@@ -19,7 +19,7 @@ gc.collect()
 # Watchdog timeout set @ 10min
 wdt = machine.WDT(timeout = 600000)
 
-_VERSION = const('20240106')
+_VERSION = const('20240107')
 
 year, month, day, hour, mins, secs, weekday, yearday = time.localtime()
 
@@ -120,7 +120,7 @@ garage_mode = False
 ota_mode = False
 add_mode_intervals = 10
 opening_type = 'door'
-rgb_brightness = 1 #(1-255)
+rgb_brightness = 10 #(1-255)
 
 # Global parameters
 add_mode_counter = 0
