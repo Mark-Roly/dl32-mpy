@@ -1,3 +1,11 @@
+#------------------------------------------
+#
+#  DL32 Micropython Release
+#  https://github.com/Mark-Roly/DL32_mpy
+#
+#------------------------------------------
+
+
 from microdot_asyncio import Microdot, send_file
 from umqtt.simple import MQTTClient
 from wiegand import Wiegand
@@ -11,15 +19,15 @@ gc.collect()
 # Watchdog timeout set @ 10min
 wdt = machine.WDT(timeout = 600000)
 
-_VERSION = const('20240105')
+_VERSION = const('20240106')
 
 year, month, day, hour, mins, secs, weekday, yearday = time.localtime()
 
+# State default values
 bell_ringing = False
 add_mode = False
 sd_present = False
 mqtt_online = False
-attached_to_board = False
 
 print('DL32 - MicroPython Edition')
 print('Version: ' + _VERSION)
@@ -123,14 +131,17 @@ ip_address = '0.0.0.0'
 buzzer_pin.value(0)
 lockRelay_pin.value(0)
 
+# Set state colours
 np_standby = (0, 0, rgb_brightness)
 np_unlocked = (0, rgb_brightness, 0)
 np_invalid = (rgb_brightness, 0, 0)
 np_add = (rgb_brightness, 0, rgb_brightness)
+np_boot = (rgb_brightness, rgb_brightness, 0)
 np_doorbell = (rgb_brightness, rgb_brightness, rgb_brightness)
 
+# Set staring colour (Standby)
 np = neopixel.NeoPixel(neopix_pin, 1)	
-np[0] = np_standby	
+np[0] = np_boot	
 np.write()
 
 # Define dictionaries to store configuration and authorized keys
@@ -213,6 +224,7 @@ def load_sd_keys():
   except:
     print('ERROR: Could not load sd/keys.cfg into keys dictionary')
 
+# Load SD config values into Configuration Dictionary
 wifi_ssid = (CONFIG_DICT['wifi_ssid'])
 wifi_pass = (CONFIG_DICT['wifi_pass'])
 mqtt_clid = (CONFIG_DICT['mqtt_clid'])
@@ -252,7 +264,7 @@ def connect_wifi():
   print('Connected to wifi SSID ' + wifi_ssid)
   resync_html_content()
 
-# REfresh the date and time
+# Refresh the date and time
 def refresh_time():
   global year, month, day, hour, mins, secs, weekday, yearday
   year, month, day, hour, mins, secs, weekday, yearday = time.localtime()
@@ -295,6 +307,7 @@ def save_config_to_esp():
   with open('dl32.cfg', 'w') as json_file:
     json.dump(CONFIG_DICT, json_file)
 
+# Publish message to status MQTT topic
 def publish_status(message):
   global mqtt_online
   if mqtt_online:
@@ -383,6 +396,7 @@ def rem_key(key_number):
     print('  Unable to remove key ' + key_number)
     print('  Invalid key format - key not removed')
 
+# Rename key
 def ren_key(key, name):
   if (len(str(key)) > 1 and len(str(key)) < 7) and (str(key) in KEYS_DICT) and (len(name) > 0) and (len(name) < 16) :
     print ('  Renaming key ' + str(key) + ' to ' + name)
@@ -440,8 +454,8 @@ def sub_cb(topic, msg):
     else:
       print ('Command not recognized!')
 
+# CSS styles for WebUI pages
 css = "div {width: 400px; margin: 20px auto; text-align: center; border: 3px solid #32e1e1; background-color: #555555; left: auto; right: auto;} hr {border-bottom: 1px solid #32e1e1} .header {font-family: Arial, Helvetica, sans-serif; font-size: 20px; color: #32e1e1} .statusText {font-size: 12px} button {width: 395px; background-color: #32e1e1; border: none; text-decoration: none} .backNav {width: 50px; float: left;} .saveConf{width: 150px; } .config_input{width: 150px;} button.rem {background-color: #C12200; width: 30px; padding-left: 2px;} button.rem:hover {background-color: red} button.ren {background-color: #ff9900; width: 55px; padding-left: 1px} button.ren:hover {background-color: #ffcc00} input {width: 296px; border: none; text-decoration: none;} button:hover {background-color: #12c1c1; border: none; text-decoration: none;} input.renInput{width: 75px} .addKey {width: 193px;} .main_heading {font-family: Arial, Helvetica, sans-serif; color: #32e1e1; font-size: 30px;} h5 {font-family: Arial, Helvetica, sans-serif; color: #32e1e1} label {font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #32e1e1;} a {font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #32e1e1;} textarea {background-color: #303030; font-size: 11px; width: 394px; height: 75px; resize: vertical; color: #32e1e1;} body {background-color: #303030; text-align: center;} "
-
 
 # Resync contents of static HTML webpage to take into account changes
 def resync_html_content():
@@ -781,12 +795,14 @@ def unlock(dur):
   print('  Locked')
   publish_status('Locked')
 
+# Monitor bell button
 def mon_bell_butt():
   global current
   if (int(bellButton_pin.value()) == 0) and (bell_ringing == False):
     print('bell button pushed')
     uasyncio.create_task(ring_bell(current))
 
+# Monitor magnetic sensor if attached
 def mon_mag_sr():
   global mag_state
   global opening_type
@@ -857,11 +873,12 @@ def mon_prog_butt():
       publish_status('Prog button pressed')
       print('prog button pressed')
 
+# Perform over-the-air update by mulling latest main.py from github repo
 def perform_OTA():
   print('Pulling OTA update...')
   ugit.pull('main.py', 'https://raw.githubusercontent.com/Mark-Roly/DL32_mpy/main/main.py')
-  print('OTA complete, resetting')
-  time.sleep_ms(5000)
+  print('OTA complete, resetting in 60 seconds...')
+  time.sleep_ms(60000)
   machine.reset()
 
 # Async function to listed for MQTT commands
@@ -980,7 +997,6 @@ def prog_sd_beeps():
   buzzer_pin.value(0)
 
 # --------- MAIN -----------
-
 async def main_loop():
   while True:
     wdt.feed()
@@ -991,7 +1007,7 @@ async def main_loop():
     mon_mag_sr()
     await uasyncio.sleep_ms(50)
 
-
+# Dip switch modes
 if int(DS01.value()) == 0:
   print('DS01 ON')
 else:
@@ -1019,6 +1035,7 @@ else:
 if silent_mode == True:
   print('Silent Mode activated')
 
+# Attempt wifi connection
 try:
   connect_wifi()
 except:
@@ -1027,6 +1044,7 @@ except:
 if ota_mode == True:
   perform_OTA()
 
+# Attempt to connect to MQTTbroker
 try:
   mqtt = MQTTClient(mqtt_clid, mqtt_brok, port=mqtt_port, user=mqtt_user, password=mqtt_pass, keepalive=300)
   mqtt.set_callback(sub_cb)
@@ -1037,6 +1055,7 @@ except:
    print('ERROR: Could not connect to MQTT Broker')
    mqtt_online = False
 
+# Attempt to subscribe to MQTT command topic
 if mqtt_online:
   try:
     mqtt.subscribe(mqtt_cmd_top)
@@ -1046,11 +1065,16 @@ if mqtt_online:
 
 web_server = Microdot()
 
+np[0] = np_standby	
+np.write()
+
 uasyncio.create_task(main_loop())
 
+# Create task to incrementally ping MQTT broker to maintain connection
 if mqtt_online:
   uasyncio.create_task(mqtt_ping())
 
+# WebUI routes
 @web_server.route('/')
 def hello(request):
   return main_html, 200, {'Content-Type': 'text/html'}
@@ -1062,7 +1086,7 @@ def config_network(request):
 
 @web_server.route('/config_network/update')
 def config_network_update(request):
-  #do le updates
+  # TODO - Updates
   resync_config_network_content()
   return config_network_html, 200, {'Content-Type': 'text/html'}
 
