@@ -5,7 +5,6 @@
 #
 #------------------------------------------
 
-
 from microdot_asyncio import Microdot, send_file
 from umqtt.simple import MQTTClient
 from wiegand import Wiegand
@@ -19,7 +18,7 @@ gc.collect()
 # Watchdog timeout set @ 10min
 wdt = machine.WDT(timeout = 600000)
 
-_VERSION = const('20240107')
+_VERSION = const('20240122')
 
 year, month, day, hour, mins, secs, weekday, yearday = time.localtime()
 
@@ -88,6 +87,19 @@ DS01 = machine.Pin(33, machine.Pin.IN, machine.Pin.PULL_UP)
 DS02 = machine.Pin(37, machine.Pin.IN, machine.Pin.PULL_UP)
 DS03 = machine.Pin(5, machine.Pin.IN, machine.Pin.PULL_UP)
 DS04 = machine.Pin(10, machine.Pin.IN, machine.Pin.PULL_UP)
+GH01 = machine.Pin(2, machine.Pin.OUT)
+GH02 = machine.Pin(4, machine.Pin.OUT)
+GH03 = machine.Pin(12, machine.Pin.OUT)
+GH04 = machine.Pin(13, machine.Pin.OUT)
+GH05 = machine.Pin(8, machine.Pin.OUT)
+GH06 = machine.Pin(9, machine.Pin.OUT)
+
+GH01.value(1)
+GH02.value(1)
+GH03.value(1)
+GH04.value(1)
+GH05.value(1)
+GH06.value(1)
 
 try:
   sd = sdcard.SDCard(machine.SPI(1, sck=machine.Pin(38), mosi=machine.Pin(36), miso=machine.Pin(35)), machine.Pin(34))
@@ -450,7 +462,13 @@ def sub_cb(topic, msg):
     if ((msg.decode('utf-8') == 'unlock') and garage_mode == False):
       unlock(mqtt_dur)
     elif ((msg.decode('utf-8') == 'toggle') and garage_mode == True):
-      unlock(gar_dur)
+      gar_toggle(gar_dur)
+    elif ((msg.decode('utf-8') == 'open') and garage_mode == True):
+      gar_open(gar_dur)
+    elif ((msg.decode('utf-8') == 'close') and garage_mode == True):
+      gar_close(gar_dur)
+    elif ((msg.decode('utf-8') == 'stop') and garage_mode == True):
+      gar_stop(gar_dur)
     else:
       print ('Command not recognized!')
 
@@ -794,6 +812,58 @@ def unlock(dur):
   np.write()
   print('  Locked')
   publish_status('Locked')
+
+# Activate toggle relay for duration specified as argument
+def gar_toggle(dur):
+  np[0] = np_unlocked
+  np.write()
+  GH01.value(0)
+  unlockBeep()
+  print('  GD_Toggled')
+  publish_status('GD_Toggled')
+  time.sleep_ms(dur)
+  GH01.value(1)
+  np[0] = np_standby
+  np.write()
+
+# Activate open for relay duration specified as argument
+def gar_open(dur):
+  np[0] = np_unlocked
+  np.write()
+  GH02.value(0)
+  unlockBeep()
+  print('  GD_Open')
+  publish_status('GD_Open')
+  time.sleep_ms(dur)
+  GH02.value(1)
+  np[0] = np_standby
+  np.write()
+  
+# Activate close relay for duration specified as argument
+def gar_close(dur):
+  np[0] = np_unlocked
+  np.write()
+  GH03.value(0)
+  unlockBeep()
+  print('  GD_Close')
+  publish_status('GD_Close')
+  time.sleep_ms(dur)
+  GH03.value(1)
+  np[0] = np_standby
+  np.write()
+
+# Activate stop relay for duration specified as argument
+def gar_stop(dur):
+  np[0] = np_unlocked
+  np.write()
+  GH04.value(0)
+  unlockBeep()
+  print('  GD_Stop')
+  publish_status('GD_Stop')
+  time.sleep_ms(dur)
+  GH04.value(1)
+  np[0] = np_standby
+  np.write()
 
 # Monitor bell button
 def mon_bell_butt():
