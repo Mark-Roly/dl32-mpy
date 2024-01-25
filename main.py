@@ -75,6 +75,7 @@ print('Current Date/Time: ' + '{}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}'.format(yea
 
 # 3.0 Pins - Uncomment if using S3 Wemos board revision
 buzzer_pin = machine.Pin(14, machine.Pin.OUT)
+buzzer2_pin = machine.Pin(3, machine.Pin.OUT)
 neopix_pin = machine.Pin(11, machine.Pin.OUT)
 lockRelay_pin = machine.Pin(1, machine.Pin.OUT)
 progButton_pin = machine.Pin(6, machine.Pin.IN, machine.Pin.PULL_UP)
@@ -141,6 +142,7 @@ ip_address = '0.0.0.0'
 
 # Set initial pin states
 buzzer_pin.value(0)
+buzzer2_pin.value(0)
 lockRelay_pin.value(0)
 
 # Set state colours
@@ -459,7 +461,9 @@ Wiegand(wiegand_0, wiegand_1, on_key)
 def sub_cb(topic, msg):
   print('Message arrived on topic ' + topic.decode('utf-8') + ': ' + msg.decode('utf-8'))
   if topic == mqtt_cmd_top:
-    if ((msg.decode('utf-8') == 'unlock') and garage_mode == False):
+    if (msg.decode('utf-8') == 'ping'):
+      publish_status('pong')
+    elif ((msg.decode('utf-8') == 'unlock') and garage_mode == False):
       unlock(mqtt_dur)
     elif ((msg.decode('utf-8') == 'toggle') and garage_mode == True):
       gar_toggle(gar_dur)
@@ -804,13 +808,15 @@ def unlock(dur):
   np.write()
   lockRelay_pin.value(1)
   unlockBeep()
-  print('  Unlocked')
+  print('  Unlocked2')
   publish_status('Unlocked')
+  buzzer2_pin.value(1)
   time.sleep_ms(dur)
   lockRelay_pin.value(0)
+  buzzer2_pin.value(0)
   np[0] = np_standby
   np.write()
-  print('  Locked')
+  print('  Locked2')
   publish_status('Locked')
 
 # Activate toggle relay for duration specified as argument
@@ -894,7 +900,7 @@ def mon_mag_sr():
   else:
     return
     
-# Async function to listen for exit button presses
+# Function to listen for exit button presses
 def mon_exit_butt():
   global add_hold_time
   global add_mode
@@ -914,7 +920,7 @@ def mon_exit_butt():
       publish_status('Exit button pressed')
       unlock(exitBut_dur)
 
-# Async function to listen for proramming button presses
+# Function to listen for proramming button presses
 def mon_prog_butt():
   global add_hold_time
   global sd_present
@@ -951,7 +957,7 @@ def perform_OTA():
   time.sleep_ms(60000)
   machine.reset()
 
-# Async function to listed for MQTT commands
+# Function to listed for MQTT commands
 def mon_cmd_topic():
   global mqtt_online
   if mqtt_online:
@@ -966,6 +972,13 @@ async def mqtt_ping():
   while mqtt_online:
     mqtt.ping()
     await uasyncio.sleep(60)
+
+# Async function to send heartbeat messages to MQTT broker
+async def mqtt_heartbeat():
+  global mqtt_online
+  while mqtt_online:
+    publish_status('heartbeat')
+    await uasyncio.sleep(300)
 
 # Play doorbel tone
 async def ring_bell(tune):
@@ -1015,56 +1028,56 @@ def key_add_mode():
 def unlockBeep():
   if silent_mode == True:
     return
-  buzzer_pin.value(1)
+  buzzer2_pin.value(1)
   time.sleep_ms(75)
-  buzzer_pin.value(0)
+  buzzer2_pin.value(0)
   time.sleep_ms(100)
-  buzzer_pin.value(1)
+  buzzer2_pin.value(1)
   time.sleep_ms(75)
-  buzzer_pin.value(0)
+  buzzer2_pin.value(0)
 
 # "Beeeep-Beeeep"
 def invalidBeep():
   if silent_mode == True:
     return
-  buzzer_pin.value(1)
+  buzzer2_pin.value(1)
   time.sleep_ms(750)
-  buzzer_pin.value(0)
+  buzzer2_pin.value(0)
   time.sleep_ms(100)
-  buzzer_pin.value(1)
+  buzzer2_pin.value(1)
   time.sleep_ms(750)
-  buzzer_pin.value(0)
+  buzzer2_pin.value(0)
   time.sleep_ms(100)
-  buzzer_pin.value(1)
+  buzzer2_pin.value(1)
   time.sleep_ms(750)
-  buzzer_pin.value(0)
+  buzzer2_pin.value(0)
   time.sleep_ms(100)
-  buzzer_pin.value(1)
+  buzzer2_pin.value(1)
   time.sleep_ms(750)
-  buzzer_pin.value(0)
+  buzzer2_pin.value(0)
 
 # "Bip"
 def lil_bip():
   if silent_mode == True:
     return
-  buzzer_pin.value(1)
+  buzzer_pin2.value(1)
   time.sleep_ms(1)
-  buzzer_pin.value(0)
+  buzzer_pin2.value(0)
 
 def prog_sd_beeps():
   if silent_mode == True:
     return
-  buzzer_pin.value(1)
+  buzzer2_pin.value(1)
   time.sleep_ms(50)
-  buzzer_pin.value(0)
+  buzzer2_pin.value(0)
   time.sleep_ms(50)
-  buzzer_pin.value(1)
+  buzzer2_pin.value(1)
   time.sleep_ms(50)
-  buzzer_pin.value(0)
+  buzzer2_pin.value(0)
   time.sleep_ms(50)
-  buzzer_pin.value(1)
+  buzzer2_pin.value(1)
   time.sleep_ms(50)
-  buzzer_pin.value(0)
+  buzzer2_pin.value(0)
 
 # --------- MAIN -----------
 async def main_loop():
@@ -1143,6 +1156,7 @@ uasyncio.create_task(main_loop())
 # Create task to incrementally ping MQTT broker to maintain connection
 if mqtt_online:
   uasyncio.create_task(mqtt_ping())
+  uasyncio.create_task(mqtt_heartbeat())
 
 # WebUI routes
 @web_server.route('/')
@@ -1179,6 +1193,8 @@ def firmware_update(request):
 def unlock_http(request):
   print('Unlock command recieved from WebUI')
   unlock(http_dur)
+  if garage_mode:
+    gar_toggle(gar_dur)
   return main_html, 200, {'Content-Type': 'text/html'}
 
 @web_server.route('/reset')
