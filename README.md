@@ -1,4 +1,7 @@
 # DL32_mpy
+
+!!! NOTICE - As Micropython does not have the required speed to reliably and consistently read the Wiegand input, this project is no longer being actively developed. Please see the [C++/Arduino variant](https://github.com/Mark-Roly/DL32)
+
 MicroPython release of the ESP32-powered Wifi & RFID Smart Door Lock.
 
 Designed for use with ESP32S3-based Wemos S3 Mini using DL32-S3 carrier board (Schematics and gerbers coming).
